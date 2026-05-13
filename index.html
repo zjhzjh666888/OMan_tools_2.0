@@ -9,7 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
     :root {
       --bg: #f7f8f5;
@@ -477,6 +476,61 @@
       .feedback-section { padding: 24px; }
       .feedback-title { font-size: 20px; }
     }
+    /* 用户信息栏 */
+    .user-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--brand);
+    }
+    .user-avatar-placeholder {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .user-nickname {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .logout-btn {
+      padding: 5px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .logout-btn:hover {
+      border-color: #e5482f;
+      color: #e5482f;
+      background: rgba(229, 72, 47, 0.06);
+    }
   </style>
 </head>
 <body data-theme="light">
@@ -494,6 +548,12 @@
           <div class="hero-badge">
             <p class="hero-badge-label">已收录工具</p>
             <p class="hero-badge-value">{{ totalTools }}+</p>
+          </div>
+          <div v-if="currentUser" class="user-bar">
+            <img v-if="currentUser.avatar" :src="currentUser.avatar" class="user-avatar" />
+            <span v-else class="user-avatar-placeholder">{{ currentUser.nickname?.slice(0,1) || '?' }}</span>
+            <span class="user-nickname">{{ currentUser.nickname }}</span>
+            <button @click="logout" class="logout-btn">退出</button>
           </div>
           <button @click="toggleDarkMode" class="theme-toggle" aria-label="切换主题">
             <span v-if="isDarkMode">🌞</span>
@@ -549,27 +609,6 @@
 <script>
   const { createApp, ref, computed, onMounted } = Vue;
   const { createRouter, createWebHashHistory } = VueRouter;
-
-  // Supabase 初始化
-  const SUPABASE_URL = "https://hhlvbbdwydoxeyyugjyy.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_kHcZ4UYvfmcchtjdKYfXKg_JnZZbtSm";
-  const supabaseClient = window.supabase?.createClient
-    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
-
-  // tool_stats 可能的主键字段名兼容：tool_id 或 id
-  let TOOL_ID_FIELD = 'tool_id';
-  const ensureToolIdField = async () => {
-    if (!supabaseClient) return TOOL_ID_FIELD;
-    try {
-      const { error } = await supabaseClient.from('tool_stats').select('tool_id').limit(1);
-      if (!error) return TOOL_ID_FIELD;
-      throw error;
-    } catch (e) {
-      TOOL_ID_FIELD = 'id';
-      return TOOL_ID_FIELD;
-    }
-  };
 
   const safeParseUrl = (input) => {
     try {
@@ -778,80 +817,125 @@
     if (timeoutMs) setTimeout(() => (sendMessage.value = ''), timeoutMs);
   };
 
-  const isStarred = (tool) => {
-    const id = tool?.id;
-    if (!id) return false;
-    return localStorage.getItem(`starred_${id}`) === '1';
+  // ========== 后端 API 基址 ==========
+  const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? `${location.protocol}//${location.hostname}:3000`
+    : '';
+
+  // ========== 登录态管理 ==========
+  const currentUser = ref(null);
+  const userStarredSet = ref(new Set());
+
+  const getToken = () => localStorage.getItem('token');
+
+  const authHeaders = () => {
+    const token = getToken();
+    return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
   };
 
-  const syncToolStatsFromSupabase = async () => {
-    if (!supabaseClient) return;
+  const checkAuth = () => {
+    const token = getToken();
+    const userStr = localStorage.getItem('user');
+    if (!token || !userStr) {
+      window.location.href = 'login.html';
+      return false;
+    }
     try {
-      const idField = await ensureToolIdField();
-      const { data, error } = await supabaseClient
-        .from('tool_stats')
-        .select(`${idField}, stars_count`);
-      if (error) throw error;
-      const map = new Map((data || []).map(row => [row[idField], row.stars_count]));
+      currentUser.value = JSON.parse(userStr);
+    } catch {
+      window.location.href = 'login.html';
+      return false;
+    }
+    return true;
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
+  };
+
+  const isStarred = (tool) => {
+    return userStarredSet.value.has(tool?.id);
+  };
+
+  // 从后端加载所有工具的星标计数
+  const syncStarsFromBackend = async () => {
+    try {
+      const resp = await fetch(`${API_BASE}/api/stars`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const map = data.stars || {};
       globalTools.value = globalTools.value.map(t => ({
         ...t,
-        stars_count: map.has(t.id) ? (map.get(t.id) || 0) : (t.stars_count || 0)
+        stars_count: map[t.id] || t.stars_count || 0
       }));
     } catch (e) {
-      console.warn('同步 Supabase 点赞数据失败：', e);
+      console.warn('同步星标计数失败：', e);
+    }
+  };
+
+  // 加载当前用户已点赞的工具列表
+  const loadMyStars = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const resp = await fetch(`${API_BASE}/api/my-stars`, { headers: authHeaders() });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      userStarredSet.value = new Set(data.starred || []);
+    } catch (e) {
+      console.warn('加载已点赞列表失败：', e);
     }
   };
 
   const handleStar = async (tool) => {
     if (!tool?.id) return;
 
+    const token = getToken();
+    if (!token) {
+      setUiMessage('请先登录后再点赞', 'error-msg', 2200);
+      setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+      return;
+    }
+
     if (isStarred(tool)) {
-      setUiMessage('您已点过赞啦', 'error-msg', 2200);
+      setUiMessage('您已经点过赞了，每个工具只能点一次哦', 'error-msg', 2200);
       return;
     }
 
     const previous = tool.stars_count || 0;
-    tool.stars_count = previous + 1; // 乐观更新
+    tool.stars_count = previous + 1;
+    userStarredSet.value.add(tool.id);
 
     try {
-      if (!supabaseClient) {
-        throw new Error('Supabase 未初始化');
+      const resp = await fetch(`${API_BASE}/api/star`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ tool_id: tool.id })
+      });
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        if (resp.status === 409) {
+          setUiMessage('您已经点过赞了', 'error-msg', 2200);
+          return;
+        }
+        if (resp.status === 401) {
+          setUiMessage('登录已过期，请重新登录', 'error-msg', 2200);
+          setTimeout(() => { window.location.href = 'login.html'; }, 1200);
+          throw new Error(data.error);
+        }
+        throw new Error(data.error || '点赞失败');
       }
 
-      const idField = await ensureToolIdField();
-
-      // 先读云端当前值再 +1（避免本地/云端不同步导致写回覆盖）
-      const { data: existing, error: readError } = await supabaseClient
-        .from('tool_stats')
-        .select('stars_count')
-        .eq(idField, tool.id)
-        .maybeSingle();
-      if (readError) throw readError;
-
-      const remoteCount = existing?.stars_count || 0;
-      const next = remoteCount + 1;
-
-      const payload = { [idField]: tool.id, stars_count: next };
-      const { error } = await supabaseClient
-        .from('tool_stats')
-        .upsert(payload, { onConflict: idField });
-
-      if (error) throw error;
-
-      localStorage.setItem(`starred_${tool.id}`, '1');
-      tool.stars_count = next; // 以云端结果为准
+      tool.stars_count = data.stars_count;
       setUiMessage('已点赞 ⭐', 'success-msg', 1800);
     } catch (e) {
-      tool.stars_count = previous; // 回滚
-      localStorage.removeItem(`starred_${tool.id}`);
+      tool.stars_count = previous;
+      userStarredSet.value.delete(tool.id);
       console.error('点赞失败：', e);
-      const hint = String(e?.message || e || '');
-      const isRls = /row level security|permission|not allowed|401|403/i.test(hint);
-      setUiMessage(
-        isRls ? '点赞失败：Supabase 权限/RLS 未放行（控制台可看报错）' : '点赞失败，请稍后再试（控制台可看报错）',
-        'error-msg',
-        3200
-      );
+      setUiMessage('点赞失败，请稍后再试', 'error-msg', 2600);
     }
   };
 
@@ -970,24 +1054,20 @@
     try {
       console.log('开始加载工具数据...');
       const response = await fetch('tools.json');
-      console.log('响应状态:', response.status);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log('加载的数据:', data);
       globalTools.value = prepareTools(data.tools);
-      console.log('工具数量:', globalTools.value.length);
       toolsLoaded.value = true;
-      console.log('数据加载完成');
-      await syncToolStatsFromSupabase();
+      await syncStarsFromBackend();
+      await loadMyStars();
     } catch (error) {
       console.error('加载工具数据失败，使用备用数据:', error);
-      // 加载失败时使用备用数据
       globalTools.value = prepareTools(fallbackTools);
-      console.log('使用备用数据，工具数量:', globalTools.value.length);
       toolsLoaded.value = true;
-      await syncToolStatsFromSupabase();
+      await syncStarsFromBackend();
+      await loadMyStars();
     }
   };
   
@@ -1181,6 +1261,8 @@
       }
 
       onMounted(() => {
+        if (!checkAuth()) return;
+
         if (window.emailjs && EMAILJS_CONFIG.PUBLIC_KEY && EMAILJS_CONFIG.PUBLIC_KEY !== "你的_Public_Key") {
           window.emailjs.init({ publicKey: EMAILJS_CONFIG.PUBLIC_KEY });
         }
@@ -1344,7 +1426,8 @@
 
       return { 
         feedbackText, contactInfo, totalTools, submitFeedback, 
-        isDarkMode, toggleDarkMode, isSending, sendMessage, sendStatusClass
+        isDarkMode, toggleDarkMode, isSending, sendMessage, sendStatusClass,
+        currentUser, logout
       };
     }
   });

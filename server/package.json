@@ -1,0 +1,17 @@
+{
+  "name": "langjianr-api",
+  "version": "1.0.0",
+  "description": "浪尖儿AI工具导航站后端API",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.6.5",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5"
+  }
+}
