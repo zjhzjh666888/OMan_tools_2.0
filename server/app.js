@@ -265,7 +265,41 @@ app.get('/api/my-stars', authMiddleware, async (req, res) => {
   }
 });
 
+// 自动建表
+async function initDatabase() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS users (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(100) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      nickname VARCHAR(50) NOT NULL,
+      avatar VARCHAR(255) DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    await pool.query(`CREATE TABLE IF NOT EXISTS user_stars (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      user_id INT UNSIGNED NOT NULL,
+      tool_id VARCHAR(100) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_user_tool (user_id, tool_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    await pool.query(`CREATE TABLE IF NOT EXISTS tool_stars_count (
+      tool_id VARCHAR(100) NOT NULL PRIMARY KEY,
+      stars_count INT UNSIGNED DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    console.log('数据库表初始化完成');
+  } catch (err) {
+    console.error('数据库建表失败:', err.message);
+  }
+}
+
 // 启动
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`OTOOLS API 服务已启动: http://localhost:${PORT}`);
+  await initDatabase();
 });
