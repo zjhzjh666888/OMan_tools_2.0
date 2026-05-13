@@ -820,7 +820,7 @@
   // ========== 后端 API 基址 ==========
   const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? `${location.protocol}//${location.hostname}:3000`
-    : '';
+    : 'https://omantools20-production.up.railway.app';
 
   // ========== 登录态管理 ==========
   const currentUser = ref(null);
