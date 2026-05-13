@@ -1,7 +1,7 @@
 {
   "name": "langjianr-api",
   "version": "1.0.0",
-  "description": "浪尖儿AI工具导航站后端API",
+  "description": "OTOOLS AI工具导航站后端API",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",

@@ -267,5 +267,5 @@ app.get('/api/my-stars', authMiddleware, async (req, res) => {
 
 // 启动
 app.listen(PORT, () => {
-  console.log(`浪尖儿 API 服务已启动: http://localhost:${PORT}`);
+  console.log(`OTOOLS API 服务已启动: http://localhost:${PORT}`);
 });

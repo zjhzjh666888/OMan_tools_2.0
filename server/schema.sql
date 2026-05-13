@@ -1,4 +1,4 @@
--- 浪尖儿 AI 工具导航站 数据库初始化脚本
+-- OTOOLS AI 工具导航站 数据库初始化脚本
 -- 使用前请先创建数据库：CREATE DATABASE langjianr CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 USE langjianr;
