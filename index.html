@@ -57,7 +57,7 @@
     /* 顶部滚动公告 */
     .announcement-bar {
       width: 100%;
-      background: linear-gradient(90deg, var(--brand), var(--brand-strong));
+      background: transparent;
       color: #fff;
       font-size: 13px;
       font-weight: 600;
@@ -68,6 +68,9 @@
       top: 0;
       left: 0;
       z-index: 9999;
+    }
+    [data-theme="light"] .announcement-bar {
+      background: linear-gradient(90deg, var(--brand), var(--brand-strong));
     }
     .announcement-bar .marquee {
       display: inline-block;
@@ -779,7 +782,7 @@
       else if (roll < 0.75) { this.r = 180 + Math.random()*40; this.g = 200 + Math.random()*30; this.b = 255; }
       else if (roll < 0.88) { this.r = 255; this.g = 240 + Math.random()*15; this.b = 200 + Math.random()*30; }
       else { this.r = 200 + Math.random()*55; this.g = 180 + Math.random()*40; this.b = 255; }
-      this.speed = Math.random() * 0.3 + 0.05;
+      this.speed = Math.random() * 0.8 + 0.15;
     }
     update() {
       this.z -= this.speed;
@@ -852,7 +855,7 @@
   }
 
   function initStars() {
-    const count = Math.min(Math.floor((canvas.width * canvas.height) / 3000), 500);
+    const count = Math.min(Math.floor((canvas.width * canvas.height) / 1800), 800);
     stars = [];
     for (let i = 0; i < count; i++) stars.push(new Star());
     shootingStars = [];
