@@ -656,9 +656,8 @@
         try {
           if (window.emailjs) {
             await emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
-              message: `【付费API开通申请】\n用户邮箱：${currentUser.value.email || '未知'}\n用户昵称：${currentUser.value.nickname || '未知'}\n请在 admin.html 中为该用户开通权限。`,
-              from_name: currentUser.value.nickname || currentUser.value.email || '付费用户',
-              to_email: '2477099183@qq.com'
+              message: `【付费API开通申请】用户邮箱：${currentUser.value.email || '未知'}，昵称：${currentUser.value.nickname || '未知'}，请在 admin.html 中为该用户开通权限。`,
+              from_name: `付费申请-${currentUser.value.nickname || currentUser.value.email}`
             }, EMAILJS_CONFIG.PUBLIC_KEY);
           }
           paidMsg.value = '申请已提交！站长收到后会尽快为您开通，请稍后刷新重试。';
@@ -666,6 +665,7 @@
         } catch (e) {
           paidMsg.value = '提交失败，请直接联系站长QQ：2477099183';
           paidMsgOk.value = false;
+          console.error('EmailJS error:', e);
         }
         paidSubmitting.value = false;
       };
