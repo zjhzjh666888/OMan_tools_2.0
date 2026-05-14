@@ -9,7 +9,7 @@ const { Resend } = require('resend');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'langjianr_secret_key_change_in_production';
-const RESEND_KEY = process.env.RESEND_KEY || 're_g4UUURgE_86qpFeGG1zWBDGm6tfxnZEBT';
+const RESEND_KEY = process.env.RESEND_KEY || 're_Ss6PYhyq_KiWYLa4nVAStTD4TyBauQyHi';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '2477099183@qq.com';
 const resend = new Resend(RESEND_KEY);
 
