@@ -727,83 +727,142 @@
   app.mount('#app');
 </script>
 
-<!-- 深色模式粒子动效 -->
+<!-- 深色模式 3D 星空动效 -->
 <script>
 (function() {
   const canvas = document.getElementById('dark-particle-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  let particles = [];
+  let stars = [];
+  let shootingStars = [];
   let animId = null;
   let isRunning = false;
+  let centerX, centerY, focalLength;
 
   function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    centerX = canvas.width / 2;
+    centerY = canvas.height / 2;
+    focalLength = Math.max(canvas.width, canvas.height) * 0.8;
   }
 
-  class DarkParticle {
-    constructor() { this.reset(); }
-    reset() {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
-      this.size = Math.random() * 2 + 0.5;
-      this.speedX = (Math.random() - 0.5) * 0.3;
-      this.speedY = (Math.random() - 0.5) * 0.3;
-      this.opacity = Math.random() * 0.5 + 0.1;
+  // 3D 星星：z 轴分布产生纵深透视
+  class Star {
+    constructor() { this.reset(true); }
+    reset(initial) {
+      this.x = (Math.random() - 0.5) * 2000;
+      this.y = (Math.random() - 0.5) * 2000;
+      this.z = initial ? Math.random() * 1500 + 200 : 1500 + Math.random() * 200;
+      this.baseSize = Math.random() * 1.2 + 0.3;
       this.twinklePhase = Math.random() * Math.PI * 2;
-      this.twinkleSpeed = Math.random() * 0.015 + 0.005;
-      this.hue = 140 + Math.random() * 40; // green-ish to match brand
+      this.twinkleSpeed = Math.random() * 0.03 + 0.008;
+      // 颜色：白、淡蓝、淡紫、淡黄 — 真实星空色
+      const roll = Math.random();
+      if (roll < 0.55) { this.r = 220 + Math.random()*35; this.g = 225 + Math.random()*30; this.b = 255; }
+      else if (roll < 0.75) { this.r = 180 + Math.random()*40; this.g = 200 + Math.random()*30; this.b = 255; }
+      else if (roll < 0.88) { this.r = 255; this.g = 240 + Math.random()*15; this.b = 200 + Math.random()*30; }
+      else { this.r = 200 + Math.random()*55; this.g = 180 + Math.random()*40; this.b = 255; }
+      this.speed = Math.random() * 0.3 + 0.05;
     }
     update() {
-      this.x += this.speedX;
-      this.y += this.speedY;
+      this.z -= this.speed;
       this.twinklePhase += this.twinkleSpeed;
-      if (this.x < -5) this.x = canvas.width + 5;
-      if (this.x > canvas.width + 5) this.x = -5;
-      if (this.y < -5) this.y = canvas.height + 5;
-      if (this.y > canvas.height + 5) this.y = -5;
+      if (this.z <= 1) this.reset(false);
     }
     draw() {
+      const scale = focalLength / this.z;
+      const sx = centerX + this.x * scale;
+      const sy = centerY + this.y * scale;
+      if (sx < -50 || sx > canvas.width + 50 || sy < -50 || sy > canvas.height + 50) return;
+      const depthFactor = 1 - this.z / 1700;
+      const size = this.baseSize * scale * 0.8;
       const twinkle = 0.5 + 0.5 * Math.sin(this.twinklePhase);
-      const alpha = this.opacity * twinkle;
-      ctx.fillStyle = `hsla(${this.hue}, 60%, 65%, ${alpha})`;
+      const alpha = Math.min(1, depthFactor * 0.9 * twinkle + 0.1);
+      if (size > 1.5) {
+        const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, size * 3);
+        glow.addColorStop(0, `rgba(${this.r|0},${this.g|0},${this.b|0},${alpha})`);
+        glow.addColorStop(0.4, `rgba(${this.r|0},${this.g|0},${this.b|0},${alpha*0.3})`);
+        glow.addColorStop(1, `rgba(${this.r|0},${this.g|0},${this.b|0},0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(sx, sy, size * 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = `rgba(${this.r|0},${this.g|0},${this.b|0},${alpha})`;
       ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.arc(sx, sy, Math.max(size, 0.4), 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  function initParticles() {
-    const count = Math.min(Math.floor((canvas.width * canvas.height) / 6000), 250);
-    particles = [];
-    for (let i = 0; i < count; i++) particles.push(new DarkParticle());
-  }
-
-  function drawConnections() {
-    for (let i = 0; i < particles.length; i++) {
-      for (let j = i + 1; j < particles.length; j++) {
-        const dx = particles[i].x - particles[j].x;
-        const dy = particles[i].y - particles[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 90) {
-          const alpha = (1 - dist / 90) * 0.1;
-          ctx.strokeStyle = `rgba(47, 139, 87, ${alpha})`;
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(particles[i].x, particles[i].y);
-          ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.stroke();
-        }
-      }
+  // 流星
+  class ShootingStar {
+    constructor() { this.active = false; }
+    spawn() {
+      this.active = true;
+      this.x = Math.random() * canvas.width * 0.8 + canvas.width * 0.1;
+      this.y = Math.random() * canvas.height * 0.3;
+      this.angle = Math.PI / 4 + (Math.random() - 0.5) * 0.5;
+      this.speed = 6 + Math.random() * 8;
+      this.len = 60 + Math.random() * 80;
+      this.life = 0;
+      this.maxLife = 40 + Math.random() * 30;
+    }
+    update() {
+      if (!this.active) return;
+      this.x += Math.cos(this.angle) * this.speed;
+      this.y += Math.sin(this.angle) * this.speed;
+      this.life++;
+      if (this.life > this.maxLife) this.active = false;
+    }
+    draw() {
+      if (!this.active) return;
+      const progress = this.life / this.maxLife;
+      const alpha = 1 - progress;
+      const tailX = this.x - Math.cos(this.angle) * this.len * (1 - progress);
+      const tailY = this.y - Math.sin(this.angle) * this.len * (1 - progress);
+      const grad = ctx.createLinearGradient(this.x, this.y, tailX, tailY);
+      grad.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      grad.addColorStop(1, 'rgba(150,180,255,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      ctx.lineTo(tailX, tailY);
+      ctx.stroke();
     }
   }
 
+  function initStars() {
+    const count = Math.min(Math.floor((canvas.width * canvas.height) / 3000), 500);
+    stars = [];
+    for (let i = 0; i < count; i++) stars.push(new Star());
+    shootingStars = [];
+    for (let i = 0; i < 3; i++) shootingStars.push(new ShootingStar());
+  }
+
+  let frameCount = 0;
   function animate() {
     if (!isRunning) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach(p => { p.update(); p.draw(); });
-    drawConnections();
+    // 深空微渐变
+    const bgGrad = ctx.createRadialGradient(centerX, centerY * 0.6, 0, centerX, centerY, Math.max(canvas.width, canvas.height) * 0.7);
+    bgGrad.addColorStop(0, 'rgba(15, 20, 40, 0.02)');
+    bgGrad.addColorStop(1, 'rgba(5, 5, 15, 0.04)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    stars.forEach(s => { s.update(); s.draw(); });
+
+    // 流星随机触发
+    frameCount++;
+    if (frameCount % 120 === 0 && Math.random() < 0.4) {
+      const idle = shootingStars.find(s => !s.active);
+      if (idle) idle.spawn();
+    }
+    shootingStars.forEach(s => { s.update(); s.draw(); });
     animId = requestAnimationFrame(animate);
   }
 
@@ -811,7 +870,7 @@
     if (isRunning) return;
     isRunning = true;
     resize();
-    initParticles();
+    initStars();
     animate();
   }
 
@@ -821,7 +880,6 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 监听主题切换
   const observer = new MutationObserver(() => {
     const theme = document.body.getAttribute('data-theme');
     if (theme === 'dark') start();
@@ -832,17 +890,11 @@
   window.addEventListener('resize', () => {
     if (!isRunning) return;
     resize();
-    initParticles();
+    initStars();
   });
 
-  // 始终启动粒子动效
-  start();
-
-  window.addEventListener('resize', () => {
-    if (!isRunning) return;
-    resize();
-    initParticles();
-  });
+  // 初始如果已是深色模式则启动
+  if (document.body.getAttribute('data-theme') === 'dark') start();
 })();
 </script>
 </body>
