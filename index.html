@@ -690,9 +690,12 @@
 
   // ========== 页面组件 ==========
   const Home = {
+    setup() {
+      return { toolCount: computed(() => globalTools.value.length) };
+    },
     template: `<div>
       <h1 class="page-title">浪尖儿AI工具导航站</h1>
-      <p class="page-desc">精选高效AI工具与实用资源，一键直达</p>
+      <p class="page-desc">精选高效AI工具与实用资源，一键直达 · 已收录 <strong style="color:var(--brand);">{{ toolCount }}</strong> 个工具</p>
       <div class="grid">
         <div class="card" @click="$router.push('/ai-nav')"><h3 class="name"><span class="emoji-icon">🧭</span>AI导航站</h3><p class="desc">主流AI工具导航聚合平台</p></div>
         <div class="card" @click="$router.push('/ai-tools')"><h3 class="name"><span class="emoji-icon">🛠️</span>AI工具</h3><p class="desc">简历、论文、办公效率等</p></div>
