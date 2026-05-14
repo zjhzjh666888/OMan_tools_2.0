@@ -578,23 +578,26 @@
   const MediaVideo = createListPage('视频工具', '视频下载、转换、去水印、字幕', t => t.category==='media-tools'&&t.subCategory==='video', '办公/媒体', '/media-tools');
   const MediaMusic = createListPage('音乐工具', '音效素材、免费音乐平台', t => t.category==='media-tools'&&t.subCategory==='music', '办公/媒体', '/media-tools');
 
+  // 全局 showPayModal 控制（供子组件调用）
+  const globalShowPayModal = ref(false);
+
   // 付费API页面
   const PaidApi = {
     setup() {
       const items = computed(() => globalTools.value.filter(t => t.category === 'paid-api'));
       const checkAndGo = async (item) => {
         const token = getToken();
-        if (!token) { app._instance.proxy.showPayModal = true; return; }
+        if (!token) { globalShowPayModal.value = true; return; }
         try {
           const resp = await fetch(`${API_BASE}/api/paid-api/check`, { headers: authHeaders() });
           const data = await resp.json();
           if (data.hasAccess) {
             window.open(item.url, '_blank');
           } else {
-            app._instance.proxy.showPayModal = true;
+            globalShowPayModal.value = true;
           }
         } catch {
-          app._instance.proxy.showPayModal = true;
+          globalShowPayModal.value = true;
         }
       };
       return { items, getFaviconUrl, handleFaviconError, getSiteColor, checkAndGo };
@@ -629,7 +632,7 @@
       const isDarkMode = ref(false);
       const isSending = ref(false);
       const isSubmitDisabled = ref(false);
-      const showPayModal = ref(false);
+      const showPayModal = globalShowPayModal;
       const totalTools = computed(() => globalTools.value.length);
 
       const toggleDarkMode = () => {
