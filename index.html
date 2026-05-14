@@ -511,13 +511,13 @@
         </div>
         <p v-if="searchResults.length===0" style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">没有找到匹配的工具</p>
       </div>
-      <router-view v-slot="{ Component }">
-        <transition name="page" mode="out-in">
-          <div v-if="!searchQuery.trim()" :key="$route.path">
-            <component :is="Component" />
-          </div>
-        </transition>
-      </router-view>
+      <div v-show="!searchQuery.trim()">
+        <router-view v-slot="{ Component }">
+          <transition name="page" mode="out-in">
+            <component :is="Component" :key="$route.path" />
+          </transition>
+        </router-view>
+      </div>
 
       <section class="feedback-section">
         <div class="feedback-left">
