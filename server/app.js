@@ -4,10 +4,14 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const { Resend } = require('resend');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'langjianr_secret_key_change_in_production';
+const RESEND_KEY = process.env.RESEND_KEY || 're_g4UUURgE_86qpFeGG1zWBDGm6tfxnZEBT';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '2477099183@qq.com';
+const resend = new Resend(RESEND_KEY);
 
 // 中间件
 app.use(cors());
@@ -344,6 +348,24 @@ app.post('/api/paid-api/revoke', async (req, res) => {
     res.json({ message: '已撤销权限' });
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 用户付费后提交开通申请（发邮件通知站长）
+app.post('/api/paid-api/apply', authMiddleware, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const nickname = req.user.nickname || '未知';
+    await resend.emails.send({
+      from: 'OMan Tools <onboarding@resend.dev>',
+      to: ADMIN_EMAIL,
+      subject: `【付费API开通申请】${userEmail}`,
+      html: `<h2>新的付费API开通申请</h2><p><strong>用户邮箱：</strong>${userEmail}</p><p><strong>昵称：</strong>${nickname}</p><p>请前往 <a href="https://omantools20-production.up.railway.app/admin.html">管理后台</a> 为该用户开通权限。</p>`
+    });
+    res.json({ message: '申请已提交' });
+  } catch (err) {
+    console.error('发送邮件失败:', err);
+    res.status(500).json({ error: '提交失败' });
   }
 });
 
