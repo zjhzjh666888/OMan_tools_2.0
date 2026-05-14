@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>站长管理 - 开通/撤销权限</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .container { background: #fff; border-radius: 16px; padding: 32px; max-width: 420px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    h1 { font-size: 22px; color: #2f8b57; margin-bottom: 8px; }
+    p { font-size: 13px; color: #666; margin-bottom: 24px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 16px; outline: none; }
+    input:focus { border-color: #2f8b57; }
+    .btn-row { display: flex; gap: 10px; }
+    button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .btn-grant { background: #2f8b57; color: #fff; }
+    .btn-grant:hover { background: #236b43; }
+    .btn-revoke { background: #e5482f; color: #fff; }
+    .btn-revoke:hover { background: #c0392b; }
+    .result { margin-top: 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
+    .result.success { display: block; background: #eaf5ee; color: #2f8b57; }
+    .result.error { display: block; background: #fef2f2; color: #e5482f; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>站长管理后台</h1>
+    <p>给付费用户开通或撤销「无限Token免费API」权限</p>
+
+    <label>管理员密钥</label>
+    <input type="password" id="adminKey" placeholder="输入 admin_key" value="oman_admin_secret_2024">
+
+    <label>用户QQ邮箱</label>
+    <input type="email" id="userEmail" placeholder="例如：123456789@qq.com">
+
+    <label>备注（选填）</label>
+    <input type="text" id="note" placeholder="例如：微信已付9.9元">
+
+    <div class="btn-row">
+      <button class="btn-grant" onclick="doAction('grant')">开通权限</button>
+      <button class="btn-revoke" onclick="doAction('revoke')">撤销权限</button>
+    </div>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const API = 'https://omantools20-production.up.railway.app';
+
+    async function doAction(action) {
+      const adminKey = document.getElementById('adminKey').value.trim();
+      const userEmail = document.getElementById('userEmail').value.trim();
+      const note = document.getElementById('note').value.trim();
+      const resultEl = document.getElementById('result');
+
+      if (!adminKey || !userEmail) {
+        resultEl.className = 'result error';
+        resultEl.textContent = '请填写管理员密钥和用户邮箱';
+        return;
+      }
+
+      resultEl.className = 'result';
+      resultEl.style.display = 'block';
+      resultEl.textContent = '处理中...';
+      resultEl.style.background = '#f0f0f0';
+      resultEl.style.color = '#333';
+
+      try {
+        const body = { admin_key: adminKey, user_email: userEmail };
+        if (action === 'grant' && note) body.note = note;
+
+        const resp = await fetch(`${API}/api/paid-api/${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+
+        if (resp.ok) {
+          resultEl.className = 'result success';
+          resultEl.textContent = action === 'grant'
+            ? `已成功开通权限：${userEmail}`
+            : `已撤销权限：${userEmail}`;
+        } else {
+          resultEl.className = 'result error';
+          resultEl.textContent = data.error || '操作失败';
+        }
+      } catch (err) {
+        resultEl.className = 'result error';
+        resultEl.textContent = '网络错误：' + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
