@@ -447,9 +447,12 @@
 
     <!-- 主内容 -->
     <main class="main-content">
-      <div style="margin-bottom:20px;position:relative;max-width:480px;">
-        <input v-model="searchQuery" type="text" placeholder="搜索工具名称、描述..." style="width:100%;height:42px;padding:0 40px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font-size:14px;outline:none;transition:border-color .2s;box-shadow:0 2px 8px rgba(0,0,0,0.04);" @focus="$event.target.style.borderColor='var(--brand)'" @blur="$event.target.style.borderColor='var(--line)'" />
-        <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none;">🔍</span>
+      <div style="margin-bottom:20px;position:relative;max-width:480px;display:flex;align-items:center;gap:10px;">
+        <div style="flex:1;position:relative;">
+          <input v-model="searchQuery" type="text" placeholder="搜索工具名称、描述..." style="width:100%;height:42px;padding:0 40px 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font-size:14px;outline:none;transition:border-color .2s;box-shadow:0 2px 8px rgba(0,0,0,0.04);" @focus="$event.target.style.borderColor='var(--brand)'" @blur="$event.target.style.borderColor='var(--line)'" />
+          <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none;">🔍</span>
+        </div>
+        <button @click="showFavorites=true" style="width:42px;height:42px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.04);flex-shrink:0;" title="我的收藏">🏠</button>
       </div>
       <div v-if="searchQuery.trim()" style="margin-bottom:24px;">
         <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">搜索结果：找到 {{ searchResults.length }} 个工具</p>
@@ -529,6 +532,31 @@
       <div v-if="paidMsg" style="margin-top:12px;font-size:13px;" :style="{color: paidMsgOk ? '#2f8b57' : '#e5482f'}">{{ paidMsg }}</div>
     </div>
   </div>
+
+  <!-- 收藏夹弹窗 -->
+  <div v-if="showFavorites" class="pay-modal-overlay" @click.self="showFavorites=false">
+    <div class="pay-modal" style="max-width:600px;text-align:left;">
+      <h3 style="text-align:center;">🏠 我的收藏</h3>
+      <p v-if="!favoriteItems.length" style="text-align:center;color:var(--muted);padding:24px 0;">还没有收藏任何工具，点击工具卡片上的 ❤️ 按钮即可收藏</p>
+      <div v-else class="grid" style="margin-top:16px;">
+        <a v-for="item in favoriteItems" :key="item.id" :href="item.url" target="_blank" class="card" style="min-height:auto;padding:14px;">
+          <div class="card-header">
+            <img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/>
+            <div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div>
+            <h3 class="name" style="font-size:14px;">{{item.name}}</h3>
+          </div>
+          <p class="desc" style="margin-top:4px;">{{item.desc}}</p>
+          <div class="meta" style="margin-top:8px;">
+            <span class="tag">{{item.tag}}</span>
+            <button class="star-btn starred" @click.stop.prevent="toggleFavorite(item.id)" style="margin-left:auto;" title="取消收藏">❤️ 取消</button>
+          </div>
+        </a>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn-close" @click="showFavorites=false">关闭</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -576,6 +604,23 @@
   const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? `${location.protocol}//${location.hostname}:3000`
     : 'https://omantools20-production.up.railway.app';
+
+  // ========== 收藏夹 ==========
+  const FAV_KEY = 'favoriteTools';
+  const favoriteToolIds = ref(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+  const showFavorites = ref(false);
+
+  const toggleFavorite = (toolId) => {
+    if (!toolId) return;
+    let list = [...favoriteToolIds.value];
+    const idx = list.indexOf(toolId);
+    if (idx >= 0) list.splice(idx, 1);
+    else list.unshift(toolId);
+    favoriteToolIds.value = list;
+    localStorage.setItem(FAV_KEY, JSON.stringify(list));
+  };
+
+  const isFavorited = (toolId) => favoriteToolIds.value.includes(toolId);
 
   // ========== 全局状态 ==========
   const globalTools = ref([]);
@@ -645,7 +690,18 @@
 
   // ========== 页面组件 ==========
   const Home = {
-    template: `<div><h1 class="page-title">浪尖儿AI工具导航站</h1><p class="page-desc">精选高效AI工具与实用资源，一键直达</p><div class="grid"><div class="card" @click="$router.push('/ai-nav')"><h3 class="name"><span class="emoji-icon">🧭</span>AI导航站</h3><p class="desc">主流AI工具导航聚合平台</p></div><div class="card" @click="$router.push('/ai-tools')"><h3 class="name"><span class="emoji-icon">🛠️</span>AI工具</h3><p class="desc">简历、论文、办公效率等</p></div><div class="card" @click="$router.push('/media-tools')"><h3 class="name"><span class="emoji-icon">🎨</span>办公/媒体</h3><p class="desc">图片、视频、音乐工具</p></div><div class="card" @click="$router.push('/study')"><h3 class="name"><span class="emoji-icon">📚</span>学习</h3><p class="desc">在线阅读、知识库、英语</p></div><div class="card" @click="$router.push('/free-vip')"><h3 class="name"><span class="emoji-icon">🎁</span>白嫖会员</h3><p class="desc">免费获取各类APP会员</p></div><div class="card" @click="$router.push('/paid-api')"><h3 class="name"><span class="emoji-icon">🔑</span>无限token免费API</h3><p class="desc">GPT 5.5，Gemini 3.1 pro，claude opus 4.7等大模型免费无限量（国内可访问）</p></div></div></div>`
+    template: `<div>
+      <h1 class="page-title">浪尖儿AI工具导航站</h1>
+      <p class="page-desc">精选高效AI工具与实用资源，一键直达</p>
+      <div class="grid">
+        <div class="card" @click="$router.push('/ai-nav')"><h3 class="name"><span class="emoji-icon">🧭</span>AI导航站</h3><p class="desc">主流AI工具导航聚合平台</p></div>
+        <div class="card" @click="$router.push('/ai-tools')"><h3 class="name"><span class="emoji-icon">🛠️</span>AI工具</h3><p class="desc">简历、论文、办公效率等</p></div>
+        <div class="card" @click="$router.push('/media-tools')"><h3 class="name"><span class="emoji-icon">🎨</span>办公/媒体</h3><p class="desc">图片、视频、音乐工具</p></div>
+        <div class="card" @click="$router.push('/study')"><h3 class="name"><span class="emoji-icon">📚</span>学习</h3><p class="desc">在线阅读、知识库、英语</p></div>
+        <div class="card" @click="$router.push('/free-vip')"><h3 class="name"><span class="emoji-icon">🎁</span>白嫖会员</h3><p class="desc">免费获取各类APP会员</p></div>
+        <div class="card" @click="$router.push('/paid-api')"><h3 class="name"><span class="emoji-icon">🔑</span>无限token免费API</h3><p class="desc">GPT 5.5，Gemini 3.1 pro，claude opus 4.7等大模型免费无限量（国内可访问）</p></div>
+      </div>
+    </div>`
   };
 
   const createListPage = (title, desc, filterFn, parentLabel, parentPath) => ({
@@ -654,9 +710,9 @@
       const items = computed(() => globalTools.value.filter(filterFn));
       const tags = computed(() => { const s = new Set(items.value.map(i => i.tag)); return ['全部', ...s]; });
       const filtered = computed(() => (!selectedTag.value || selectedTag.value === '全部') ? items.value : items.value.filter(i => i.tag === selectedTag.value));
-      return { title, desc, parentLabel, parentPath, selectedTag, tags, filtered, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred };
+      return { title, desc, parentLabel, parentPath, selectedTag, tags, filtered, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred, toggleFavorite, isFavorited };
     },
-    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><router-link v-if="parentPath" :to="parentPath">{{parentLabel}}</router-link><span v-if="parentPath">/</span><span>{{title}}</span></div><h1 class="page-title">{{title}}</h1><p class="page-desc">{{desc}}</p><div class="tag-filter" v-if="tags.length>2"><span class="filter-label">标签：</span><button v-for="t in tags" :key="t" @click="selectedTag=t" :class="{active:selectedTag===t}" class="tag-btn">{{t}}</button></div><div class="grid"><a v-for="item in filtered" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn" :class="{starred:isStarred(item)}" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><span class="domain">{{item.domain}}</span></div></a></div></div>`
+    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><router-link v-if="parentPath" :to="parentPath">{{parentLabel}}</router-link><span v-if="parentPath">/</span><span>{{title}}</span></div><h1 class="page-title">{{title}}</h1><p class="page-desc">{{desc}}</p><div class="tag-filter" v-if="tags.length>2"><span class="filter-label">标签：</span><button v-for="t in tags" :key="t" @click="selectedTag=t" :class="{active:selectedTag===t}" class="tag-btn">{{t}}</button></div><div class="grid"><a v-for="item in filtered" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn" :class="{starred:isFavorited(item.id)}" @click.stop.prevent="toggleFavorite(item.id)" :title="isFavorited(item.id)?'取消收藏':'收藏'">{{isFavorited(item.id)?'❤️':'🤍'}}</button><button class="star-btn" :class="{starred:isStarred(item)}" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><span class="domain">{{item.domain}}</span></div></a></div></div>`
   });
 
   const AINav = createListPage('AI导航站', 'AI工具导航聚合', t => t.category === 'ai-nav', null, null);
@@ -745,6 +801,7 @@
         return globalTools.value.filter(t => t.name?.toLowerCase().includes(q) || t.desc?.toLowerCase().includes(q) || t.tag?.toLowerCase().includes(q));
       });
       const totalTools = computed(() => globalTools.value.length);
+      const favoriteItems = computed(() => favoriteToolIds.value.map(id => globalTools.value.find(t => t.id === id)).filter(Boolean));
 
       const closeNotice = () => {
         showNotice.value = false;
@@ -854,6 +911,7 @@
         showPayModal, totalTools, currentUser, sendMessage, sendStatusClass,
         showNotice, noticeDontShow, closeNotice,
         searchQuery, searchResults, getFaviconUrl, handleFaviconError, getSiteColor,
+        showFavorites, favoriteItems, toggleFavorite,
         toggleDarkMode, submitFeedback, logout, handlePaidConfirm,
         paidSubmitting, paidMsg, paidMsgOk, paidWechatName, paidWechatId
       };
