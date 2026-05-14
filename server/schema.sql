@@ -29,3 +29,15 @@ CREATE TABLE IF NOT EXISTS tool_stars_count (
   tool_id VARCHAR(100) NOT NULL PRIMARY KEY,
   stars_count INT UNSIGNED DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 付费API权限表（站长手动开通）
+CREATE TABLE IF NOT EXISTS paid_api_access (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NULL DEFAULT NULL COMMENT '过期时间，NULL表示永久',
+  status ENUM('active', 'revoked') DEFAULT 'active',
+  note VARCHAR(255) DEFAULT '' COMMENT '站长备注',
+  UNIQUE KEY uk_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

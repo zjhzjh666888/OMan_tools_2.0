@@ -397,6 +397,30 @@
       "views": 0
     },
     {
+      "id": "haisou",
+      "name": "海搜",
+      "url": "https://haisou.cc/",
+      "desc": "收录免费资料网盘2亿+",
+      "domain": "haisou.cc",
+      "tag": "资料",
+      "category": "study",
+      "subCategory": "",
+      "likes": 0,
+      "views": 0
+    },
+    {
+      "id": "iflow",
+      "name": "心流",
+      "url": "https://iflow.cn/",
+      "desc": "个人知识库最佳网站",
+      "domain": "iflow.cn",
+      "tag": "知识库",
+      "category": "study",
+      "subCategory": "",
+      "likes": 0,
+      "views": 0
+    },
+    {
       "id": "weread",
       "name": "微信读书",
       "url": "https://weread.qq.com/",
@@ -500,6 +524,18 @@
       "domain": "xunlei.com",
       "tag": "办公",
       "category": "free-vip",
+      "subCategory": "",
+      "likes": 0,
+      "views": 0
+    },
+    {
+      "id": "nexusvai-api",
+      "name": "无限Token免费API",
+      "url": "https://www.nexusvai.xyz/chat/",
+      "desc": "9.9元：GPT 5.5，Gemini 3.1 pro，claude opus 4.7等等国内外大模型免费无限量API调用",
+      "domain": "nexusvai.xyz",
+      "tag": "API",
+      "category": "paid-api",
       "subCategory": "",
       "likes": 0,
       "views": 0

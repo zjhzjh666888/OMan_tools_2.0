@@ -265,6 +265,88 @@ app.get('/api/my-stars', authMiddleware, async (req, res) => {
   }
 });
 
+// ========== 付费API权限接口 ==========
+
+// 检查当前用户是否有付费API权限
+app.get('/api/paid-api/check', authMiddleware, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM paid_api_access WHERE user_id = ? AND status = "active" AND (expires_at IS NULL OR expires_at > NOW())',
+      [req.user.id]
+    );
+    res.json({ hasAccess: rows.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 站长手动开通权限（需要站长身份验证，简单用 admin_key）
+app.post('/api/paid-api/grant', async (req, res) => {
+  try {
+    const { admin_key, user_email, expires_at, note } = req.body;
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'oman_admin_secret_2024';
+
+    if (admin_key !== ADMIN_KEY) {
+      return res.status(403).json({ error: '无权操作' });
+    }
+
+    if (!user_email) {
+      return res.status(400).json({ error: '请提供用户邮箱' });
+    }
+
+    // 查找用户
+    const [users] = await pool.query('SELECT id, email, nickname FROM users WHERE email = ?', [user_email]);
+    if (users.length === 0) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    const user = users[0];
+
+    // 插入或更新权限
+    await pool.query(
+      `INSERT INTO paid_api_access (user_id, expires_at, note, status)
+       VALUES (?, ?, ?, 'active')
+       ON DUPLICATE KEY UPDATE expires_at = VALUES(expires_at), note = VALUES(note), status = 'active', granted_at = NOW()`,
+      [user.id, expires_at || null, note || '']
+    );
+
+    res.json({ message: `已为 ${user.email} (${user.nickname}) 开通付费API权限` });
+  } catch (err) {
+    console.error('开通权限失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// 站长撤销权限
+app.post('/api/paid-api/revoke', async (req, res) => {
+  try {
+    const { admin_key, user_email } = req.body;
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'oman_admin_secret_2024';
+
+    if (admin_key !== ADMIN_KEY) {
+      return res.status(403).json({ error: '无权操作' });
+    }
+
+    if (!user_email) {
+      return res.status(400).json({ error: '请提供用户邮箱' });
+    }
+
+    const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [user_email]);
+    if (users.length === 0) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    await pool.query(
+      'UPDATE paid_api_access SET status = "revoked" WHERE user_id = ?',
+      [users[0].id]
+    );
+
+    res.json({ message: '已撤销权限' });
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 自动建表
 async function initDatabase() {
   try {
@@ -290,6 +372,17 @@ async function initDatabase() {
     await pool.query(`CREATE TABLE IF NOT EXISTS tool_stars_count (
       tool_id VARCHAR(100) NOT NULL PRIMARY KEY,
       stars_count INT UNSIGNED DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+
+    await pool.query(`CREATE TABLE IF NOT EXISTS paid_api_access (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      user_id INT UNSIGNED NOT NULL,
+      granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      expires_at TIMESTAMP NULL DEFAULT NULL,
+      status ENUM('active', 'revoked') DEFAULT 'active',
+      note VARCHAR(255) DEFAULT '',
+      UNIQUE KEY uk_user (user_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
 
     console.log('数据库表初始化完成');
