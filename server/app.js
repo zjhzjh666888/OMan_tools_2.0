@@ -347,6 +347,26 @@ app.post('/api/paid-api/revoke', async (req, res) => {
   }
 });
 
+// 站长查看所有用户（需 admin_key）
+app.post('/api/admin/users', async (req, res) => {
+  try {
+    const { admin_key } = req.body;
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'oman_admin_secret_2024';
+    if (admin_key !== ADMIN_KEY) return res.status(403).json({ error: '无权操作' });
+
+    const [rows] = await pool.query(
+      `SELECT u.id, u.email, u.nickname, u.created_at,
+              CASE WHEN p.status = 'active' AND (p.expires_at IS NULL OR p.expires_at > NOW()) THEN 1 ELSE 0 END AS has_paid
+       FROM users u
+       LEFT JOIN paid_api_access p ON p.user_id = u.id
+       ORDER BY u.created_at DESC`
+    );
+    res.json({ users: rows });
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // 自动建表
 async function initDatabase() {
   try {

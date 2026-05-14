@@ -6,28 +6,40 @@
   <title>站长管理 - 开通/撤销权限</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .container { background: #fff; border-radius: 16px; padding: 32px; max-width: 420px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 20px; }
+    .container { background: #fff; border-radius: 16px; padding: 32px; max-width: 900px; margin: 0 auto; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
     h1 { font-size: 22px; color: #2f8b57; margin-bottom: 8px; }
-    p { font-size: 13px; color: #666; margin-bottom: 24px; }
+    p.desc { font-size: 13px; color: #666; margin-bottom: 24px; }
     label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
     input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 16px; outline: none; }
     input:focus { border-color: #2f8b57; }
-    .btn-row { display: flex; gap: 10px; }
-    button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .btn-row { display: flex; gap: 10px; margin-bottom: 16px; }
+    button { padding: 12px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
     .btn-grant { background: #2f8b57; color: #fff; }
     .btn-grant:hover { background: #236b43; }
     .btn-revoke { background: #e5482f; color: #fff; }
     .btn-revoke:hover { background: #c0392b; }
-    .result { margin-top: 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
+    .btn-load { background: #1473e6; color: #fff; }
+    .btn-load:hover { background: #0f5fc2; }
+    .result { margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 13px; display: none; }
     .result.success { display: block; background: #eaf5ee; color: #2f8b57; }
     .result.error { display: block; background: #fef2f2; color: #e5482f; }
+
+    .section-title { font-size: 18px; font-weight: 700; color: #333; margin: 32px 0 16px; padding-top: 24px; border-top: 1px solid #eee; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f8f8; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #eee; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; color: #333; }
+    tr:hover td { background: #fafffe; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .badge-yes { background: #eaf5ee; color: #2f8b57; }
+    .badge-no { background: #f5f5f5; color: #999; }
+    .empty { text-align: center; padding: 40px; color: #999; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>站长管理后台</h1>
-    <p>给付费用户开通或撤销「无限Token免费API」权限</p>
+    <p class="desc">查看注册用户、开通/撤销「无限Token免费API」权限</p>
 
     <label>管理员密钥</label>
     <input type="password" id="adminKey" placeholder="输入 admin_key" value="oman_admin_secret_2024">
@@ -41,9 +53,13 @@
     <div class="btn-row">
       <button class="btn-grant" onclick="doAction('grant')">开通权限</button>
       <button class="btn-revoke" onclick="doAction('revoke')">撤销权限</button>
+      <button class="btn-load" onclick="loadUsers()">查看所有用户</button>
     </div>
 
     <div class="result" id="result"></div>
+
+    <h2 class="section-title">注册用户列表</h2>
+    <div id="userTable"><p class="empty">点击「查看所有用户」加载</p></div>
   </div>
 
   <script>
@@ -80,9 +96,8 @@
 
         if (resp.ok) {
           resultEl.className = 'result success';
-          resultEl.textContent = action === 'grant'
-            ? `已成功开通权限：${userEmail}`
-            : `已撤销权限：${userEmail}`;
+          resultEl.textContent = data.message || (action === 'grant' ? '开通成功' : '撤销成功');
+          loadUsers();
         } else {
           resultEl.className = 'result error';
           resultEl.textContent = data.error || '操作失败';
@@ -90,6 +105,50 @@
       } catch (err) {
         resultEl.className = 'result error';
         resultEl.textContent = '网络错误：' + err.message;
+      }
+    }
+
+    async function loadUsers() {
+      const adminKey = document.getElementById('adminKey').value.trim();
+      const tableEl = document.getElementById('userTable');
+
+      if (!adminKey) {
+        tableEl.innerHTML = '<p class="empty">请先填写管理员密钥</p>';
+        return;
+      }
+
+      tableEl.innerHTML = '<p class="empty">加载中...</p>';
+
+      try {
+        const resp = await fetch(`${API}/api/admin/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ admin_key: adminKey })
+        });
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          tableEl.innerHTML = `<p class="empty" style="color:#e5482f">${data.error || '加载失败'}</p>`;
+          return;
+        }
+
+        if (!data.users || data.users.length === 0) {
+          tableEl.innerHTML = '<p class="empty">暂无注册用户</p>';
+          return;
+        }
+
+        let html = `<table><thead><tr><th>ID</th><th>邮箱</th><th>昵称</th><th>注册时间</th><th>付费状态</th></tr></thead><tbody>`;
+        data.users.forEach(u => {
+          const time = new Date(u.created_at).toLocaleString('zh-CN');
+          const badge = u.has_paid
+            ? '<span class="badge badge-yes">已开通</span>'
+            : '<span class="badge badge-no">未开通</span>';
+          html += `<tr><td>${u.id}</td><td>${u.email}</td><td>${u.nickname}</td><td>${time}</td><td>${badge}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        tableEl.innerHTML = html;
+      } catch (err) {
+        tableEl.innerHTML = `<p class="empty" style="color:#e5482f">网络错误：${err.message}</p>`;
       }
     }
   </script>
