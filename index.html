@@ -241,6 +241,7 @@
     }
     [data-theme="light"] .card {
       box-shadow: 0 2px 12px rgba(30, 53, 41, 0.04);
+      transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s cubic-bezier(.4,0,.2,1), border-color .3s ease, background .3s ease;
     }
     [data-theme="light"] .card::before {
       content: '';
@@ -249,11 +250,17 @@
       height: 3px;
       background: linear-gradient(90deg, var(--brand), var(--accent));
       opacity: 0;
-      transition: opacity .25s ease;
+      transition: opacity .3s ease;
       border-radius: 18px 18px 0 0;
     }
     [data-theme="light"] .card:hover::before {
       opacity: 1;
+    }
+    [data-theme="light"] .card:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 16px 40px rgba(47, 139, 87, 0.12), 0 6px 16px rgba(20, 115, 230, 0.08);
+      border-color: var(--brand);
+      background: linear-gradient(135deg, rgba(47,139,87,0.05), rgba(20,115,230,0.04));
     }
     [data-theme="light"] .card:active {
       transform: translateY(-2px) scale(0.98);
@@ -265,7 +272,7 @@
       border-color: var(--brand);
     }
     [data-theme="light"] .card:hover {
-      background: linear-gradient(135deg, rgba(47,139,87,0.04), rgba(20,115,230,0.03));
+      transform: translateY(-6px) scale(1.02);
     }
     [data-theme="dark"] .card {
       border-color: rgba(80, 90, 120, 0.2);
