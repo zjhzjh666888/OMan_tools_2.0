@@ -288,7 +288,7 @@ app.get('/api/paid-api/check', authMiddleware, async (req, res) => {
 app.post('/api/paid-api/grant', async (req, res) => {
   try {
     const { admin_key, user_email, expires_at, note } = req.body;
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'oman_admin_secret_2024';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'Zjh666888!';
 
     if (admin_key !== ADMIN_KEY) {
       return res.status(403).json({ error: '无权操作' });
@@ -325,7 +325,7 @@ app.post('/api/paid-api/grant', async (req, res) => {
 app.post('/api/paid-api/revoke', async (req, res) => {
   try {
     const { admin_key, user_email } = req.body;
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'oman_admin_secret_2024';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'Zjh666888!';
 
     if (admin_key !== ADMIN_KEY) {
       return res.status(403).json({ error: '无权操作' });
@@ -373,7 +373,7 @@ app.post('/api/paid-api/apply', authMiddleware, async (req, res) => {
 app.post('/api/admin/users', async (req, res) => {
   try {
     const { admin_key } = req.body;
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'oman_admin_secret_2024';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'Zjh666888!';
     if (admin_key !== ADMIN_KEY) return res.status(403).json({ error: '无权操作' });
 
     const [rows] = await pool.query(
