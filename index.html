@@ -349,11 +349,19 @@
     .pay-modal .btn-paid:hover { background: var(--brand-strong); }
 
     /* 反馈区 */
-    .feedback-section { margin-top: 48px; background: var(--brand-soft); border: 1px solid rgba(47,139,87,0.15); border-radius: 18px; padding: 28px; }
+    .feedback-section { margin-top: 48px; background: var(--brand-soft); border: 1px solid rgba(47,139,87,0.15); border-radius: 18px; padding: 28px; display: flex; gap: 32px; align-items: flex-start; }
     [data-theme="dark"] .feedback-section {
       background: rgba(15, 20, 30, 0.4);
       border-color: rgba(52, 168, 83, 0.15);
       backdrop-filter: blur(6px);
+    }
+    .feedback-left { flex: 1; min-width: 0; }
+    .feedback-right { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .feedback-right img { width: 140px; height: 140px; border-radius: 12px; border: 2px solid var(--line); object-fit: contain; background: #fff; }
+    .feedback-right p { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6; max-width: 160px; }
+    @media (max-width: 768px) {
+      .feedback-section { flex-direction: column; }
+      .feedback-right { align-self: center; }
     }
     .feedback-title { margin: 0 0 10px; font-size: 20px; font-weight: 700; color: var(--brand); }
     .feedback-desc { margin: 0 0 16px; font-size: 13px; color: var(--muted); line-height: 1.6; }
@@ -441,16 +449,22 @@
       <router-view></router-view>
 
       <section class="feedback-section">
-        <h2 class="feedback-title">征集更多好用的工具</h2>
-        <p class="feedback-desc">发现好工具？推荐给我们，让更多人受益。可发送至：<strong>2477099183@qq.com</strong></p>
-        <div class="feedback-form">
-          <input v-model="contactInfo" class="contact-input" type="text" placeholder="您的联系方式（邮箱/微信号）*" />
-          <textarea v-model="feedbackText" class="feedback-input" placeholder="工具名称、功能描述、访问链接..." rows="3"></textarea>
-          <button @click="submitFeedback" class="feedback-submit" :disabled="isSending || isSubmitDisabled" type="button">
-            {{ isSending ? '发送中...' : isSubmitDisabled ? '请稍后再提交' : '提交推荐' }}
-          </button>
+        <div class="feedback-left">
+          <h2 class="feedback-title">征集更多好用的工具</h2>
+          <p class="feedback-desc">发现好工具？推荐给我们，让更多人受益。可发送至：<strong>2477099183@qq.com</strong></p>
+          <div class="feedback-form">
+            <input v-model="contactInfo" class="contact-input" type="text" placeholder="您的联系方式（邮箱/微信号）*" />
+            <textarea v-model="feedbackText" class="feedback-input" placeholder="工具名称、功能描述、访问链接..." rows="3"></textarea>
+            <button @click="submitFeedback" class="feedback-submit" :disabled="isSending || isSubmitDisabled" type="button">
+              {{ isSending ? '发送中...' : isSubmitDisabled ? '请稍后再提交' : '提交推荐' }}
+            </button>
+          </div>
+          <div v-if="sendMessage" class="send-status" :class="sendStatusClass">{{ sendMessage }}</div>
         </div>
-        <div v-if="sendMessage" class="send-status" :class="sendStatusClass">{{ sendMessage }}</div>
+        <div class="feedback-right">
+          <img src="assets/wechat-pay-qr.png" alt="微信收款码" />
+          <p>觉得对你有帮助就资助一下吧，每一分都是更新下去的动力</p>
+        </div>
       </section>
     </main>
   </div>
