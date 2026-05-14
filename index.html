@@ -622,6 +622,14 @@
 
   const isFavorited = (toolId) => favoriteToolIds.value.includes(toolId);
 
+  const shareLink = async (tool) => {
+    const text = `${tool.name} - ${tool.desc}\n${tool.url}`;
+    if (navigator.share) {
+      try { await navigator.share({ title: tool.name, text: tool.desc, url: tool.url }); return; } catch {}
+    }
+    try { await navigator.clipboard.writeText(text); setUiMessage('链接已复制到剪贴板', 'success-msg'); } catch { setUiMessage('复制失败，请手动复制', 'error-msg'); }
+  };
+
   // ========== 全局状态 ==========
   const globalTools = ref([]);
   const currentUser = ref(null);
@@ -713,9 +721,9 @@
       const items = computed(() => globalTools.value.filter(filterFn));
       const tags = computed(() => { const s = new Set(items.value.map(i => i.tag)); return ['全部', ...s]; });
       const filtered = computed(() => (!selectedTag.value || selectedTag.value === '全部') ? items.value : items.value.filter(i => i.tag === selectedTag.value));
-      return { title, desc, parentLabel, parentPath, selectedTag, tags, filtered, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred, toggleFavorite, isFavorited };
+      return { title, desc, parentLabel, parentPath, selectedTag, tags, filtered, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred, toggleFavorite, isFavorited, shareLink };
     },
-    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><router-link v-if="parentPath" :to="parentPath">{{parentLabel}}</router-link><span v-if="parentPath">/</span><span>{{title}}</span></div><h1 class="page-title">{{title}}</h1><p class="page-desc">{{desc}}</p><div class="tag-filter" v-if="tags.length>2"><span class="filter-label">标签：</span><button v-for="t in tags" :key="t" @click="selectedTag=t" :class="{active:selectedTag===t}" class="tag-btn">{{t}}</button></div><div class="grid"><a v-for="item in filtered" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn" :class="{starred:isFavorited(item.id)}" @click.stop.prevent="toggleFavorite(item.id)" :title="isFavorited(item.id)?'取消收藏':'收藏'">{{isFavorited(item.id)?'❤️':'🤍'}}</button><button class="star-btn" :class="{starred:isStarred(item)}" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><span class="domain">{{item.domain}}</span></div></a></div></div>`
+    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><router-link v-if="parentPath" :to="parentPath">{{parentLabel}}</router-link><span v-if="parentPath">/</span><span>{{title}}</span></div><h1 class="page-title">{{title}}</h1><p class="page-desc">{{desc}}</p><div class="tag-filter" v-if="tags.length>2"><span class="filter-label">标签：</span><button v-for="t in tags" :key="t" @click="selectedTag=t" :class="{active:selectedTag===t}" class="tag-btn">{{t}}</button></div><div class="grid"><a v-for="item in filtered" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn" :class="{starred:isFavorited(item.id)}" @click.stop.prevent="toggleFavorite(item.id)" :title="isFavorited(item.id)?'取消收藏':'收藏'">{{isFavorited(item.id)?'❤️':'🤍'}}</button><button class="star-btn" :class="{starred:isStarred(item)}" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><button class="star-btn" @click.stop.prevent="shareLink(item)" title="复制链接">📋</button><span class="domain">{{item.domain}}</span></div></a></div></div>`
   });
 
   const AINav = createListPage('AI导航站', 'AI工具导航聚合', t => t.category === 'ai-nav', null, null);
