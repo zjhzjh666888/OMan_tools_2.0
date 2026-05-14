@@ -10,19 +10,19 @@
   <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     :root {
-      --bg: #f7f8f5;
-      --surface: rgba(255, 255, 255, 0.85);
-      --surface-soft: #fbfcfa;
+      --bg: #f4f7f5;
+      --surface: rgba(255, 255, 255, 0.92);
+      --surface-soft: #f8faf8;
       --text: #18221d;
       --muted: #6f7974;
-      --line: #e7ebe7;
+      --line: #e0e8e3;
       --brand: #2f8b57;
       --brand-strong: #236b43;
-      --brand-soft: #eaf5ee;
+      --brand-soft: #e8f5ed;
       --brand-glow: rgba(47, 139, 87, 0.18);
       --accent: #1473e6;
       --shadow: 0 8px 24px rgba(30, 53, 41, 0.06);
-      --shadow-soft: 0 10px 26px rgba(30, 53, 41, 0.08);
+      --shadow-soft: 0 12px 32px rgba(30, 53, 41, 0.1);
       --motion: 200ms;
       --radius-lg: 22px;
       --radius-md: 14px;
@@ -52,6 +52,10 @@
       font-family: var(--font-family);
       color: var(--text);
       background: var(--bg);
+    }
+    [data-theme="light"] body {
+      background: linear-gradient(160deg, #f0f7f2 0%, #f7f4f0 40%, #f2f5fa 100%);
+      background-attachment: fixed;
     }
 
     /* 顶部滚动公告 */
@@ -233,14 +237,32 @@
       border: 1px solid var(--line); border-radius: 18px; background: var(--surface);
       backdrop-filter: blur(8px);
       padding: 20px; min-height: 140px; cursor: pointer;
-      transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+      transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease;
       position: relative; overflow: hidden;
+    }
+    [data-theme="light"] .card {
+      box-shadow: 0 2px 12px rgba(30, 53, 41, 0.04);
+    }
+    [data-theme="light"] .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--brand), var(--accent));
+      opacity: 0;
+      transition: opacity .25s ease;
+      border-radius: 18px 18px 0 0;
+    }
+    [data-theme="light"] .card:hover::before {
+      opacity: 1;
     }
     .card:hover {
       transform: translateY(-4px);
       box-shadow: 0 0 20px rgba(52, 168, 83, 0.15), var(--shadow-soft);
       border-color: var(--brand);
-      background: rgba(30, 40, 70, 0.6);
+    }
+    [data-theme="light"] .card:hover {
+      background: linear-gradient(135deg, rgba(47,139,87,0.04), rgba(20,115,230,0.03));
     }
     [data-theme="dark"] .card {
       border-color: rgba(80, 90, 120, 0.2);
