@@ -410,6 +410,22 @@
     .error-msg { background: rgba(229,72,47,0.1); color: #e5482f; }
     .info-msg { background: rgba(59,130,246,0.1); color: #3b82f6; }
 
+    /* 页面切换过渡动画 */
+    .page-enter-active {
+      transition: opacity .28s ease, transform .28s cubic-bezier(.4,0,.2,1);
+    }
+    .page-leave-active {
+      transition: opacity .18s ease, transform .18s cubic-bezier(.4,0,.6,1);
+    }
+    .page-enter-from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    .page-leave-to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+
     /* 响应式 */
     @media (max-width: 768px) {
       .sidebar { width: 60px; padding: 12px 0; }
@@ -495,7 +511,11 @@
         </div>
         <p v-if="searchResults.length===0" style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0;">没有找到匹配的工具</p>
       </div>
-      <router-view v-show="!searchQuery.trim()"></router-view>
+      <router-view v-if="!searchQuery.trim()" v-slot="{ Component }">
+        <transition name="page" mode="out-in">
+          <component :is="Component" :key="$route.path" />
+        </transition>
+      </router-view>
 
       <section class="feedback-section">
         <div class="feedback-left">
