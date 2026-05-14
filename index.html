@@ -415,14 +415,14 @@
       <img src="assets/wechat-pay-qr.png" alt="微信收款码" class="qrcode-img" />
       <div class="pay-info">
         <p>💰 价格：<strong>9.9元</strong></p>
-        <p>📱 扫码微信支付后，联系站长开通权限</p>
-        <p>📮 站长QQ：<strong>2477099183</strong></p>
-        <p>👥 Q群：<strong>732298962</strong></p>
+        <p>📱 扫码微信支付后，点击下方按钮提交开通申请</p>
+        <p>⏰ 站长收到后会尽快为您开通权限</p>
       </div>
       <div class="btn-row">
         <button class="btn-close" @click="showPayModal=false">取消</button>
-        <button class="btn-paid" @click="handlePaidConfirm">我已支付</button>
+        <button class="btn-paid" @click="handlePaidConfirm" :disabled="paidSubmitting">{{ paidSubmitting ? '提交中...' : '我已支付，申请开通' }}</button>
       </div>
+      <div v-if="paidMsg" style="margin-top:12px;font-size:13px;" :style="{color: paidMsgOk ? '#2f8b57' : '#e5482f'}">{{ paidMsg }}</div>
     </div>
   </div>
 </div>
@@ -641,9 +641,33 @@
         localStorage.setItem('theme', isDarkMode.value ? 'dark' : 'light');
       };
 
-      const handlePaidConfirm = () => {
-        showPayModal.value = false;
-        alert('请添加站长QQ：2477099183，发送支付截图，站长将为您开通权限后即可访问。');
+      const paidSubmitting = ref(false);
+      const paidMsg = ref('');
+      const paidMsgOk = ref(false);
+
+      const handlePaidConfirm = async () => {
+        if (!currentUser.value) {
+          paidMsg.value = '请先登录后再操作';
+          paidMsgOk.value = false;
+          return;
+        }
+        paidSubmitting.value = true;
+        paidMsg.value = '';
+        try {
+          if (window.emailjs) {
+            await emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
+              message: `【付费API开通申请】\n用户邮箱：${currentUser.value.email || '未知'}\n用户昵称：${currentUser.value.nickname || '未知'}\n请在 admin.html 中为该用户开通权限。`,
+              from_name: currentUser.value.nickname || currentUser.value.email || '付费用户',
+              to_email: '2477099183@qq.com'
+            }, EMAILJS_CONFIG.PUBLIC_KEY);
+          }
+          paidMsg.value = '申请已提交！站长收到后会尽快为您开通，请稍后刷新重试。';
+          paidMsgOk.value = true;
+        } catch (e) {
+          paidMsg.value = '提交失败，请直接联系站长QQ：2477099183';
+          paidMsgOk.value = false;
+        }
+        paidSubmitting.value = false;
       };
 
       const submitFeedback = async () => {
@@ -694,7 +718,8 @@
       return {
         feedbackText, contactInfo, isDarkMode, isSending, isSubmitDisabled,
         showPayModal, totalTools, currentUser, sendMessage, sendStatusClass,
-        toggleDarkMode, submitFeedback, logout, handlePaidConfirm
+        toggleDarkMode, submitFeedback, logout, handlePaidConfirm,
+        paidSubmitting, paidMsg, paidMsgOk
       };
     }
   });
