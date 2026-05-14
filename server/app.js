@@ -351,21 +351,40 @@ app.post('/api/paid-api/revoke', async (req, res) => {
   }
 });
 
-// 用户付费后提交开通申请（发邮件通知站长）
+// 用户付费后提交开通申请（发邮件通知站长，含微信信息）
 app.post('/api/paid-api/apply', authMiddleware, async (req, res) => {
   try {
     const userEmail = req.user.email;
     const nickname = req.user.nickname || '未知';
+    const { wechat_name, wechat_id } = req.body || {};
     await resend.emails.send({
       from: 'OMan Tools <onboarding@resend.dev>',
       to: ADMIN_EMAIL,
-      subject: `【付费API开通申请】${userEmail}`,
-      html: `<h2>新的付费API开通申请</h2><p><strong>用户邮箱：</strong>${userEmail}</p><p><strong>昵称：</strong>${nickname}</p><p>请前往 <a href="https://omantools20-production.up.railway.app/admin.html">管理后台</a> 为该用户开通权限。</p>`
+      subject: `【付费API开通申请】${nickname}`,
+      html: `<h2>新的付费API开通申请</h2><p><strong>用户邮箱：</strong>${userEmail}</p><p><strong>站内昵称：</strong>${nickname}</p><p><strong>微信名：</strong>${wechat_name || '未填写'}</p><p><strong>微信号：</strong>${wechat_id || '未填写'}</p><p>请前往 <a href="https://omantools20-production.up.railway.app/admin.html">管理后台</a> 为该用户开通权限。</p>`
     });
     res.json({ message: '申请已提交' });
   } catch (err) {
     console.error('发送邮件失败:', err);
     res.status(500).json({ error: '提交失败' });
+  }
+});
+
+// 通用发邮件接口（征集工具等）
+app.post('/api/send-email', async (req, res) => {
+  try {
+    const { subject, from_name, message } = req.body;
+    if (!message || !from_name) return res.status(400).json({ error: '缺少必填字段' });
+    await resend.emails.send({
+      from: 'OMan Tools <onboarding@resend.dev>',
+      to: ADMIN_EMAIL,
+      subject: subject || `【网站反馈】来自 ${from_name}`,
+      html: `<h2>网站反馈</h2><p><strong>联系方式：</strong>${from_name}</p><p><strong>内容：</strong></p><pre>${message}</pre>`
+    });
+    res.json({ message: '发送成功' });
+  } catch (err) {
+    console.error('发送邮件失败:', err);
+    res.status(500).json({ error: '发送失败' });
   }
 });
 

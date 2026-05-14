@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
-  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
     :root {
       --bg: #f4f7f5;
@@ -512,8 +511,7 @@
     return m[title] || '✨';
   };
 
-  // ========== EmailJS 配置 ==========
-  const EMAILJS_CONFIG = { PUBLIC_KEY: "H-rtm74T_n5Z1pLWG", SERVICE_ID: "service_nbiw2gj", TEMPLATE_ID: "template_lhwxo2x" };
+  // ========== EmailJS 已移除，改用后端 Resend ==========
 
   // ========== 后端 API ==========
   const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -709,17 +707,11 @@
         try {
           const resp = await fetch(`${API_BASE}/api/paid-api/apply`, {
             method: 'POST',
-            headers: authHeaders()
+            headers: authHeaders(),
+            body: JSON.stringify({ wechat_name: paidWechatName.value, wechat_id: paidWechatId.value })
           });
           const data = await resp.json();
           if (resp.ok) {
-            if (window.emailjs) {
-              await emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
-                message: `【付费API申请】\n用户昵称：${currentUser.value.nickname}\n微信名：${paidWechatName.value}\n微信号：${paidWechatId.value}`,
-                from_name: paidWechatName.value,
-                to_email: '2477099183@qq.com'
-              }, EMAILJS_CONFIG.PUBLIC_KEY);
-            }
             paidMsg.value = '申请已提交！站长收到后会尽快为您开通，请稍后刷新重试。';
             paidMsgOk.value = true;
             paidWechatName.value = '';
@@ -741,15 +733,19 @@
         }
         isSending.value = true;
         try {
-          if (window.emailjs) {
-            await emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
-              message: feedbackText.value, from_name: contactInfo.value, to_email: '2477099183@qq.com'
-            }, EMAILJS_CONFIG.PUBLIC_KEY);
+          const resp = await fetch(`${API_BASE}/api/send-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_name: contactInfo.value, message: feedbackText.value, subject: `【工具推荐】来自 ${contactInfo.value}` })
+          });
+          if (resp.ok) {
+            setUiMessage('提交成功，感谢推荐！', 'success-msg');
+            feedbackText.value = ''; contactInfo.value = '';
+            isSubmitDisabled.value = true;
+            setTimeout(() => (isSubmitDisabled.value = false), 30000);
+          } else {
+            setUiMessage('提交失败，请直接发邮件', 'error-msg');
           }
-          setUiMessage('提交成功，感谢推荐！', 'success-msg');
-          feedbackText.value = ''; contactInfo.value = '';
-          isSubmitDisabled.value = true;
-          setTimeout(() => (isSubmitDisabled.value = false), 30000);
         } catch (e) {
           setUiMessage('提交失败，请直接发邮件', 'error-msg');
         }
