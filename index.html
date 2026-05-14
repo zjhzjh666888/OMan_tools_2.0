@@ -32,19 +32,19 @@
       --font-family: var(--font-body);
     }
     [data-theme="dark"] {
-      --bg: #0d0d14;
-      --surface: rgba(30, 30, 42, 0.55);
-      --surface-soft: rgba(40, 40, 55, 0.45);
-      --text: #f7f7f7;
-      --muted: #c0c6c3;
-      --line: #404040;
-      --brand: #34a853;
-      --brand-strong: #2d8f47;
-      --brand-soft: #2a3a2f;
-      --brand-glow: rgba(52, 168, 83, 0.2);
+      --bg: #0a0a12;
+      --surface: rgba(18, 20, 30, 0.35);
+      --surface-soft: rgba(22, 24, 36, 0.3);
+      --text: #e8eaf0;
+      --muted: #9ba3b0;
+      --line: rgba(80, 90, 120, 0.3);
+      --brand: #5b9cf5;
+      --brand-strong: #7bb8ff;
+      --brand-soft: rgba(60, 100, 180, 0.12);
+      --brand-glow: rgba(91, 156, 245, 0.15);
       --accent: #4285f4;
-      --shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-      --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.25);
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.35);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { min-height: 100vh; }
@@ -234,9 +234,20 @@
       position: relative; overflow: hidden;
     }
     .card:hover {
-      transform: translateY(-6px);
-      box-shadow: var(--shadow-soft);
+      transform: translateY(-4px);
+      box-shadow: 0 0 20px rgba(91, 156, 245, 0.15), var(--shadow-soft);
       border-color: var(--brand);
+      background: rgba(30, 40, 70, 0.6);
+    }
+    [data-theme="dark"] .card {
+      border-color: rgba(80, 90, 120, 0.2);
+      background: rgba(15, 18, 28, 0.25);
+      backdrop-filter: blur(6px);
+    }
+    [data-theme="dark"] .card:hover {
+      background: rgba(35, 50, 90, 0.55);
+      border-color: rgba(91, 156, 245, 0.5);
+      box-shadow: 0 0 24px rgba(91, 156, 245, 0.12), 0 8px 32px rgba(0,0,0,0.3);
     }
     .card:hover .name { color: var(--brand); }
     .name { font-size: 17px; font-weight: 650; color: var(--text); transition: color .2s; margin: 0; }
@@ -304,6 +315,11 @@
 
     /* 反馈区 */
     .feedback-section { margin-top: 48px; background: var(--brand-soft); border: 1px solid rgba(47,139,87,0.15); border-radius: 18px; padding: 28px; }
+    [data-theme="dark"] .feedback-section {
+      background: rgba(15, 20, 35, 0.4);
+      border-color: rgba(91, 156, 245, 0.15);
+      backdrop-filter: blur(6px);
+    }
     .feedback-title { margin: 0 0 10px; font-size: 20px; font-weight: 700; color: var(--brand); }
     .feedback-desc { margin: 0 0 16px; font-size: 13px; color: var(--muted); line-height: 1.6; }
     .feedback-form { display: flex; flex-direction: column; gap: 10px; max-width: 560px; }
