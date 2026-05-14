@@ -457,8 +457,12 @@
       <img src="assets/wechat-pay-qr.png" alt="微信收款码" class="qrcode-img" />
       <div class="pay-info">
         <p>💰 价格：<strong>9.9元</strong></p>
-        <p>📱 扫码微信支付后，点击下方按钮提交开通申请</p>
+        <p>📱 扫码微信支付后，填写微信信息并提交开通申请</p>
         <p>⏰ 站长收到后会尽快为您开通权限</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <input v-model="paidWechatName" type="text" placeholder="您的微信昵称 *" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface-soft);color:var(--text);outline:none;" />
+        <input v-model="paidWechatId" type="text" placeholder="您的微信号 *" style="width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--surface-soft);color:var(--text);outline:none;" />
       </div>
       <div class="btn-row">
         <button class="btn-close" @click="showPayModal=false">取消</button>
@@ -686,10 +690,17 @@
       const paidSubmitting = ref(false);
       const paidMsg = ref('');
       const paidMsgOk = ref(false);
+      const paidWechatName = ref('');
+      const paidWechatId = ref('');
 
       const handlePaidConfirm = async () => {
         if (!currentUser.value) {
           paidMsg.value = '请先登录后再操作';
+          paidMsgOk.value = false;
+          return;
+        }
+        if (!paidWechatName.value.trim() || !paidWechatId.value.trim()) {
+          paidMsg.value = '请填写微信昵称和微信号';
           paidMsgOk.value = false;
           return;
         }
@@ -702,8 +713,17 @@
           });
           const data = await resp.json();
           if (resp.ok) {
+            if (window.emailjs) {
+              await emailjs.send(EMAILJS_CONFIG.SERVICE_ID, EMAILJS_CONFIG.TEMPLATE_ID, {
+                message: `【付费API申请】\n用户昵称：${currentUser.value.nickname}\n微信名：${paidWechatName.value}\n微信号：${paidWechatId.value}`,
+                from_name: paidWechatName.value,
+                to_email: '2477099183@qq.com'
+              }, EMAILJS_CONFIG.PUBLIC_KEY);
+            }
             paidMsg.value = '申请已提交！站长收到后会尽快为您开通，请稍后刷新重试。';
             paidMsgOk.value = true;
+            paidWechatName.value = '';
+            paidWechatId.value = '';
           } else {
             paidMsg.value = data.error || '提交失败，请直接联系站长QQ：2477099183';
             paidMsgOk.value = false;
@@ -764,7 +784,7 @@
         feedbackText, contactInfo, isDarkMode, isSending, isSubmitDisabled,
         showPayModal, totalTools, currentUser, sendMessage, sendStatusClass,
         toggleDarkMode, submitFeedback, logout, handlePaidConfirm,
-        paidSubmitting, paidMsg, paidMsgOk
+        paidSubmitting, paidMsg, paidMsgOk, paidWechatName, paidWechatId
       };
     }
   });
