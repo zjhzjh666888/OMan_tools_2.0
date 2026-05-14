@@ -408,6 +408,7 @@
 
   <!-- 右上角操作栏 -->
   <div class="top-right-actions">
+    <button @click="showNotice=true" class="theme-toggle" title="公告"><span>📢</span></button>
     <button @click="toggleDarkMode" class="theme-toggle">
       <span v-if="isDarkMode">🌞</span><span v-else>🌙</span>
     </button>
@@ -467,6 +468,21 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- 公告弹窗 -->
+  <div v-if="showNotice" class="pay-modal-overlay" @click.self="closeNotice">
+    <div class="pay-modal" style="max-width:440px;">
+      <h3>📢 公告</h3>
+      <p style="font-size:15px;color:var(--text);margin-bottom:20px;line-height:1.8;">想一起学习可进Q群<strong>732298962</strong>，可免费领取资料</p>
+      <label style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px;font-size:12px;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" v-model="noticeDontShow" style="width:14px;height:14px;cursor:pointer;" />
+        下次不再自动弹出
+      </label>
+      <div class="btn-row">
+        <button class="btn-paid" @click="closeNotice">我知道了</button>
+      </div>
+    </div>
   </div>
 
   <!-- 付费弹窗 -->
@@ -698,7 +714,14 @@
       const isSending = ref(false);
       const isSubmitDisabled = ref(false);
       const showPayModal = globalShowPayModal;
+      const showNotice = ref(false);
+      const noticeDontShow = ref(false);
       const totalTools = computed(() => globalTools.value.length);
+
+      const closeNotice = () => {
+        showNotice.value = false;
+        if (noticeDontShow.value) { localStorage.setItem('noticeDismissed', '1'); }
+      };
 
       const toggleDarkMode = () => {
         isDarkMode.value = !isDarkMode.value;
@@ -794,12 +817,14 @@
         const token = getToken();
         const userStr = localStorage.getItem('user');
         if (token && userStr) { try { currentUser.value = JSON.parse(userStr); } catch {} }
+        if (currentUser.value && localStorage.getItem('noticeDismissed') !== '1') { showNotice.value = true; }
         loadTools();
       });
 
       return {
         feedbackText, contactInfo, isDarkMode, isSending, isSubmitDisabled,
         showPayModal, totalTools, currentUser, sendMessage, sendStatusClass,
+        showNotice, noticeDontShow, closeNotice,
         toggleDarkMode, submitFeedback, logout, handlePaidConfirm,
         paidSubmitting, paidMsg, paidMsgOk, paidWechatName, paidWechatId
       };
