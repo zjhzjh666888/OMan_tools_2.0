@@ -127,8 +127,8 @@
     .sidebar {
       width: var(--sidebar-width);
       min-height: calc(100vh - 30px);
-      background: var(--surface);
-      border-right: 1px solid var(--line);
+      background: linear-gradient(to left, transparent, var(--surface) 30%);
+      border-right: none;
       position: fixed;
       top: 30px;
       left: 0;
@@ -138,7 +138,6 @@
       padding: 20px 0;
       overflow-y: auto;
       z-index: 100;
-      box-shadow: 2px 0 12px rgba(0,0,0,0.04);
     }
     .sidebar-brand {
       padding: 0 16px 20px;
@@ -147,11 +146,12 @@
     }
     .sidebar-brand h1 {
       font-family: var(--font-heading);
-      font-size: 24px;
+      font-size: 16px;
       font-weight: 800;
       color: var(--brand);
       cursor: pointer;
       margin-bottom: 4px;
+      line-height: 1.4;
     }
     .sidebar-brand p {
       font-size: 11px;
@@ -367,7 +367,7 @@
     <!-- 左侧侧边栏 -->
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <h1 @click="$router.push('/')">浪尖儿</h1>
+        <h1 @click="$router.push('/')">{{ currentUser ? '你好' + currentUser.nickname + '开心呀' : '浪尖儿' }}</h1>
         <p>WavePeak | AI效率导航</p>
       </div>
       <nav class="sidebar-nav">
