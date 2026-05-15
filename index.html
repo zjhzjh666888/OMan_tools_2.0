@@ -304,30 +304,6 @@
     .star-btn:hover { border-color: var(--brand); }
     .star-btn.starred { color: #b45309; border-color: rgba(245,158,11,0.35); background: rgba(245,158,11,0.1); }
 
-    /* 分享按钮 */
-    .share-btn {
-      position: relative; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
-      border-radius: 999px; padding: 3px 9px; display: inline-flex; align-items: center; gap: 4px;
-      cursor: pointer; font-size: 11px; font-weight: 700; transition: all .2s;
-    }
-    .share-btn:hover { border-color: var(--brand); color: var(--brand); }
-    .share-menu {
-      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-      background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 6px; min-width: 130px; z-index: 999;
-      display: flex; flex-direction: column; gap: 2px;
-    }
-    .share-menu::after {
-      content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-      border: 6px solid transparent; border-top-color: var(--surface);
-    }
-    .share-menu-item {
-      display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 8px;
-      font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; transition: background .15s;
-      white-space: nowrap; border: none; background: none; width: 100%; text-align: left;
-    }
-    .share-menu-item:hover { background: var(--brand-soft); color: var(--brand); }
-
     .page-title { margin: 0 0 16px; font-family: var(--font-heading); font-size: 28px; font-weight: 800; color: var(--brand); }
     .page-desc { margin: 0 0 20px; font-size: 14px; color: var(--muted); }
     .breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 12px; color: var(--muted); }
@@ -488,7 +464,6 @@
             <p class="desc">{{item.desc}}</p>
             <div class="meta">
               <span class="tag">{{item.tag}}</span>
-              <button class="share-btn" @click.stop.prevent="toggleShare(item,$event)">🔗 分享<div v-if="shareOpenId===item.id" class="share-menu" @click.stop><button class="share-menu-item" @click.stop.prevent="copyLink(item,$event)">📋 复制链接</button><button class="share-menu-item" @click.stop.prevent="shareToWeibo(item,$event)">🔴 分享到微博</button><button class="share-menu-item" @click.stop.prevent="shareToQQ(item,$event)">💬 分享到QQ</button></div></button>
               <span class="domain">{{item.domain}}</span>
             </div>
           </a>
@@ -669,47 +644,9 @@
     } catch { tool.stars_count = prev; userStarredSet.value.delete(tool.id); }
   };
 
-  // ========== 分享功能 ==========
-  const shareOpenId = ref(null);
-  const toggleShare = (item, e) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    shareOpenId.value = shareOpenId.value === item.id ? null : item.id;
-  };
-  const closeShare = () => { shareOpenId.value = null; };
-  const copyLink = async (item, e) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    try {
-      await navigator.clipboard.writeText(item.url);
-      setUiMessage('链接已复制到剪贴板', 'success-msg');
-    } catch { setUiMessage('复制失败，请手动复制', 'error-msg'); }
-    closeShare();
-  };
-  const shareToWeibo = (item, e) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    const text = encodeURIComponent(`推荐一个好工具：${item.name} - ${item.desc}`);
-    const url = encodeURIComponent(item.url);
-    window.open(`https://service.weibo.com/share/share.php?title=${text}&url=${url}`, '_blank');
-    closeShare();
-  };
-  const shareToQQ = (item, e) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    const title = encodeURIComponent(item.name);
-    const summary = encodeURIComponent(item.desc || '');
-    const url = encodeURIComponent(item.url);
-    window.open(`https://connect.qq.com/widget/shareqq/index.html?title=${title}&summary=${summary}&url=${url}`, '_blank');
-    closeShare();
-  };
-
-  // 点击空白处关闭分享菜单
-  document.addEventListener('click', () => { shareOpenId.value = null; });
-
   // ========== 页面组件 ==========
   const Home = {
-    setup() {
-      const totalTools = computed(() => globalTools.value.length);
-      return { totalTools };
-    },
-    template: `<div><h1 class="page-title">浪尖儿AI工具导航站</h1><p class="page-desc">精选高效AI工具与实用资源，一键直达</p><p v-if="totalTools" style="margin:-8px 0 20px;font-size:14px;font-weight:600;color:var(--brand);display:inline-flex;align-items:center;gap:6px;background:var(--brand-soft);border:1px solid rgba(47,139,87,0.15);border-radius:20px;padding:6px 16px;"><span style="font-size:18px;">📦</span> 已收录 <span style="font-size:18px;font-weight:800;">{{ totalTools }}</span> 个工具</p><div class="grid"><div class="card" @click="$router.push('/ai-nav')"><h3 class="name"><span class="emoji-icon">🧭</span>AI导航站</h3><p class="desc">主流AI工具导航聚合平台</p></div><div class="card" @click="$router.push('/ai-tools')"><h3 class="name"><span class="emoji-icon">🛠️</span>AI工具</h3><p class="desc">简历、论文、办公效率等</p></div><div class="card" @click="$router.push('/media-tools')"><h3 class="name"><span class="emoji-icon">🎨</span>办公/媒体</h3><p class="desc">图片、视频、音乐工具</p></div><div class="card" @click="$router.push('/study')"><h3 class="name"><span class="emoji-icon">📚</span>学习</h3><p class="desc">在线阅读、知识库、英语</p></div><div class="card" @click="$router.push('/free-vip')"><h3 class="name"><span class="emoji-icon">🎁</span>白嫖会员</h3><p class="desc">免费获取各类APP会员</p></div><div class="card" @click="$router.push('/paid-api')"><h3 class="name"><span class="emoji-icon">🔑</span>无限token免费API</h3><p class="desc">GPT 5.5，Gemini 3.1 pro，claude opus 4.7等大模型免费无限量（国内可访问）</p></div></div></div>`
+    template: `<div><h1 class="page-title">浪尖儿AI工具导航站</h1><p class="page-desc">精选高效AI工具与实用资源，一键直达</p><div class="grid"><div class="card" @click="$router.push('/ai-nav')"><h3 class="name"><span class="emoji-icon">🧭</span>AI导航站</h3><p class="desc">主流AI工具导航聚合平台</p></div><div class="card" @click="$router.push('/ai-tools')"><h3 class="name"><span class="emoji-icon">🛠️</span>AI工具</h3><p class="desc">简历、论文、办公效率等</p></div><div class="card" @click="$router.push('/media-tools')"><h3 class="name"><span class="emoji-icon">🎨</span>办公/媒体</h3><p class="desc">图片、视频、音乐工具</p></div><div class="card" @click="$router.push('/study')"><h3 class="name"><span class="emoji-icon">📚</span>学习</h3><p class="desc">在线阅读、知识库、英语</p></div><div class="card" @click="$router.push('/free-vip')"><h3 class="name"><span class="emoji-icon">🎁</span>白嫖会员</h3><p class="desc">免费获取各类APP会员</p></div><div class="card" @click="$router.push('/paid-api')"><h3 class="name"><span class="emoji-icon">🔑</span>无限token免费API</h3><p class="desc">GPT 5.5，Gemini 3.1 pro，claude opus 4.7等大模型免费无限量（国内可访问）</p></div></div></div>`
   };
 
   const createListPage = (title, desc, filterFn, parentLabel, parentPath) => ({
@@ -718,9 +655,9 @@
       const items = computed(() => globalTools.value.filter(filterFn));
       const tags = computed(() => { const s = new Set(items.value.map(i => i.tag)); return ['全部', ...s]; });
       const filtered = computed(() => (!selectedTag.value || selectedTag.value === '全部') ? items.value : items.value.filter(i => i.tag === selectedTag.value));
-      return { title, desc, parentLabel, parentPath, selectedTag, tags, filtered, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred, shareOpenId, toggleShare, copyLink, shareToWeibo, shareToQQ };
+      return { title, desc, parentLabel, parentPath, selectedTag, tags, filtered, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred };
     },
-    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><router-link v-if="parentPath" :to="parentPath">{{parentLabel}}</router-link><span v-if="parentPath">/</span><span>{{title}}</span></div><h1 class="page-title">{{title}}</h1><p class="page-desc">{{desc}}</p><div class="tag-filter" v-if="tags.length>2"><span class="filter-label">标签：</span><button v-for="t in tags" :key="t" @click="selectedTag=t" :class="{active:selectedTag===t}" class="tag-btn">{{t}}</button></div><div class="grid"><a v-for="item in filtered" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn" :class="{starred:isStarred(item)}" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><button class="share-btn" @click.stop.prevent="toggleShare(item,$event)">🔗 分享<div v-if="shareOpenId===item.id" class="share-menu" @click.stop><button class="share-menu-item" @click.stop.prevent="copyLink(item,$event)">📋 复制链接</button><button class="share-menu-item" @click.stop.prevent="shareToWeibo(item,$event)">🔴 分享到微博</button><button class="share-menu-item" @click.stop.prevent="shareToQQ(item,$event)">💬 分享到QQ</button></div></button><span class="domain">{{item.domain}}</span></div></a></div></div>`
+    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><router-link v-if="parentPath" :to="parentPath">{{parentLabel}}</router-link><span v-if="parentPath">/</span><span>{{title}}</span></div><h1 class="page-title">{{title}}</h1><p class="page-desc">{{desc}}</p><div class="tag-filter" v-if="tags.length>2"><span class="filter-label">标签：</span><button v-for="t in tags" :key="t" @click="selectedTag=t" :class="{active:selectedTag===t}" class="tag-btn">{{t}}</button></div><div class="grid"><a v-for="item in filtered" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||'?')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn" :class="{starred:isStarred(item)}" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><span class="domain">{{item.domain}}</span></div></a></div></div>`
   });
 
   const AINav = createListPage('AI导航站', 'AI工具导航聚合', t => t.category === 'ai-nav', null, null);
@@ -755,9 +692,9 @@
         if (!userStarredSet.value.size) return [];
         return globalTools.value.filter(t => userStarredSet.value.has(t.id));
       });
-      return { favoriteTools, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred, shareOpenId, toggleShare, copyLink, shareToWeibo, shareToQQ };
+      return { favoriteTools, getFaviconUrl, handleFaviconError, getSiteColor, handleStar, isStarred };
     },
-    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><span>我的收藏</span></div><h1 class="page-title">🏠 我的收藏</h1><p class="page-desc">你收藏的网站都在这里</p><div v-if="favoriteTools.length" class="grid"><a v-for="item in favoriteTools" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||\'?\')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn starred" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><button class="share-btn" @click.stop.prevent="toggleShare(item,$event)">🔗 分享<div v-if="shareOpenId===item.id" class="share-menu" @click.stop><button class="share-menu-item" @click.stop.prevent="copyLink(item,$event)">📋 复制链接</button><button class="share-menu-item" @click.stop.prevent="shareToWeibo(item,$event)">🔴 分享到微博</button><button class="share-menu-item" @click.stop.prevent="shareToQQ(item,$event)">💬 分享到QQ</button></div></button><span class="domain">{{item.domain}}</span></div></a></div><div v-else style="text-align:center;padding:60px 0;color:var(--muted);"><p style="font-size:48px;margin-bottom:16px;">📭</p><p style="font-size:15px;">还没有收藏任何工具</p><p style="font-size:13px;margin-top:8px;">浏览工具并点击 ⭐ 即可收藏到这里</p></div></div>`
+    template: `<div><div class="breadcrumb"><router-link to="/">首页</router-link><span>/</span><span>我的收藏</span></div><h1 class="page-title">🏠 我的收藏</h1><p class="page-desc">你收藏的网站都在这里</p><div v-if="favoriteTools.length" class="grid"><a v-for="item in favoriteTools" :key="item.id" :href="item.url" target="_blank" class="card"><div class="card-header"><img v-if="!item.__faviconFailed" :src="getFaviconUrl(item.domain||item.url)" class="card-favicon" @error="handleFaviconError($event,item)"/><div v-else class="card-favicon-fallback" :style="{background:getSiteColor(item)}">{{ (item.name||\'?\')[0] }}</div><h3 class="name">{{item.name}}</h3></div><p class="desc">{{item.desc}}</p><div class="meta"><span class="tag">{{item.tag}}</span><button class="star-btn starred" @click.stop.prevent="handleStar(item)">⭐ {{item.stars_count||0}}</button><span class="domain">{{item.domain}}</span></div></a></div><div v-else style="text-align:center;padding:60px 0;color:var(--muted);"><p style="font-size:48px;margin-bottom:16px;">📭</p><p style="font-size:15px;">还没有收藏任何工具</p><p style="font-size:13px;margin-top:8px;">浏览工具并点击 ⭐ 即可收藏到这里</p></div></div>`
   };
 
   // 付费API页面
@@ -932,8 +869,7 @@
         showNotice, noticeDontShow, closeNotice,
         searchQuery, searchResults, getFaviconUrl, handleFaviconError, getSiteColor,
         toggleDarkMode, submitFeedback, logout, handlePaidConfirm,
-        paidSubmitting, paidMsg, paidMsgOk, paidWechatName, paidWechatId,
-        shareOpenId, toggleShare, copyLink, shareToWeibo, shareToQQ
+        paidSubmitting, paidMsg, paidMsgOk, paidWechatName, paidWechatId
       };
     }
   });
