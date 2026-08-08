@@ -628,8 +628,9 @@
     if (ms) setTimeout(() => (sendMessage.value = ''), ms);
   };
 
+  const starLocks = new Set();
   const handleStar = async (tool) => {
-    if (!tool?.id) return;
+    if (!tool?.id || starLocks.has(tool.id)) return;
     const token = getToken();
     if (!token) { setUiMessage('请先登录后再点赞', 'error-msg'); setTimeout(() => { window.location.href = 'login.html'; }, 1200); return; }
     const starred = isStarred(tool);
@@ -642,6 +643,7 @@
       tool.stars_count = prev + 1;
       userStarredSet.value.add(tool.id);
     }
+    starLocks.add(tool.id);
     try {
       const resp = await fetch(`${API_BASE}/api/star`, { method: starred ? 'DELETE' : 'POST', headers: authHeaders(), body: JSON.stringify({ tool_id: tool.id }) });
       const data = await resp.json();
@@ -651,6 +653,8 @@
       // Rollback on failure
       tool.stars_count = prev;
       if (starred) { userStarredSet.value.add(tool.id); } else { userStarredSet.value.delete(tool.id); }
+    } finally {
+      starLocks.delete(tool.id);
     }
   };
 
