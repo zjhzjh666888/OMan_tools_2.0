@@ -632,16 +632,26 @@
     if (!tool?.id) return;
     const token = getToken();
     if (!token) { setUiMessage('请先登录后再点赞', 'error-msg'); setTimeout(() => { window.location.href = 'login.html'; }, 1200); return; }
-    if (isStarred(tool)) { setUiMessage('您已经点过赞了', 'error-msg', 2000); return; }
+    const starred = isStarred(tool);
     const prev = tool.stars_count || 0;
-    tool.stars_count = prev + 1;
-    userStarredSet.value.add(tool.id);
+    // Optimistic UI toggle
+    if (starred) {
+      tool.stars_count = Math.max(prev - 1, 0);
+      userStarredSet.value.delete(tool.id);
+    } else {
+      tool.stars_count = prev + 1;
+      userStarredSet.value.add(tool.id);
+    }
     try {
-      const resp = await fetch(`${API_BASE}/api/star`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ tool_id: tool.id }) });
+      const resp = await fetch(`${API_BASE}/api/star`, { method: starred ? 'DELETE' : 'POST', headers: authHeaders(), body: JSON.stringify({ tool_id: tool.id }) });
       const data = await resp.json();
       if (!resp.ok) { if (resp.status === 401) { setUiMessage('登录过期，请重新登录', 'error-msg'); setTimeout(() => { window.location.href = 'login.html'; }, 1200); } throw new Error(data.error); }
       tool.stars_count = data.stars_count;
-    } catch { tool.stars_count = prev; userStarredSet.value.delete(tool.id); }
+    } catch {
+      // Rollback on failure
+      tool.stars_count = prev;
+      if (starred) { userStarredSet.value.add(tool.id); } else { userStarredSet.value.delete(tool.id); }
+    }
   };
 
   // ========== 页面组件 ==========
