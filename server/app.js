@@ -456,7 +456,7 @@ async function initDatabase() {
 async function start() {
   await initDatabase();
   app.listen(PORT, () => {
-    console.log(`OTOOLS API 服务已启动: http://localhost:${PORT}`);
+    console.log(`omale-tools API 服务已启动: http://localhost:${PORT}`);
   });
 }
 start();
