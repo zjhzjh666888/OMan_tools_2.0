@@ -5,18 +5,25 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const { Resend } = require('resend');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+const fs = require('fs');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'langjianr_secret_key_change_in_production';
-const RESEND_KEY = process.env.RESEND_KEY || 're_Ss6PYhyq_KiWYLa4nVAStTD4TyBauQyHi';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || '2477099183@qq.com';
+const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production';
+const RESEND_KEY = process.env.RESEND_KEY || 'your-resend-api-key';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'your-email@example.com';
 const resend = new Resend(RESEND_KEY);
 
 // 中间件
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..')));
+const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
+if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // MySQL 连接池
 const pool = mysql.createPool({
@@ -145,6 +152,20 @@ app.post('/api/login', async (req, res) => {
 });
 
 // 获取当前用户信息
+// 修改昵称
+app.post('/api/profile/nickname', authMiddleware, async (req, res) => {
+  const { nickname } = req.body;
+  if (!nickname || nickname.length < 2 || nickname.length > 20) {
+    return res.status(400).json({ error: '昵称长度需2-20个字符' });
+  }
+  try {
+    await pool.query('UPDATE users SET nickname = ? WHERE id = ?', [nickname, req.user.id]);
+    res.json({ message: '昵称修改成功', nickname });
+  } catch (err) {
+    res.status(500).json({ error: '修改失败' });
+  }
+});
+
 app.get('/api/me', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT id, email, nickname, avatar FROM users WHERE id = ?', [req.user.id]);
@@ -156,6 +177,19 @@ app.get('/api/me', authMiddleware, async (req, res) => {
 });
 
 // 领取头像
+// 上传自定义头像（文件上传）
+app.post('/api/avatar/upload', authMiddleware, upload.single('avatar'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '请选择图片' });
+  const ext = path.extname(req.file.originalname) || '.png';
+  const filename = 'user_' + req.user.id + '_' + Date.now() + ext;
+  const filepath = path.join('uploads', 'avatars', filename);
+  fs.writeFileSync(path.join(__dirname, '..', filepath), req.file.buffer);
+  const avatarUrl = '/' + filepath.replace(/\\/g, '/');
+  await pool.query('UPDATE users SET avatar = ? WHERE id = ?', [avatarUrl, req.user.id]);
+  res.json({ message: '头像上传成功', avatar: avatarUrl });
+});
+
+// 选择预设头像（保留原有功能）
 app.post('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const { avatar } = req.body;
@@ -288,7 +322,7 @@ app.get('/api/paid-api/check', authMiddleware, async (req, res) => {
 app.post('/api/paid-api/grant', async (req, res) => {
   try {
     const { admin_key, user_email, expires_at, note } = req.body;
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'Zjh666888!';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'change-me-in-production';
 
     if (admin_key !== ADMIN_KEY) {
       return res.status(403).json({ error: '无权操作' });
@@ -325,7 +359,7 @@ app.post('/api/paid-api/grant', async (req, res) => {
 app.post('/api/paid-api/revoke', async (req, res) => {
   try {
     const { admin_key, user_email } = req.body;
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'Zjh666888!';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'change-me-in-production';
 
     if (admin_key !== ADMIN_KEY) {
       return res.status(403).json({ error: '无权操作' });
@@ -361,7 +395,7 @@ app.post('/api/paid-api/apply', authMiddleware, async (req, res) => {
       from: 'OMan Tools <onboarding@resend.dev>',
       to: ADMIN_EMAIL,
       subject: `【付费API开通申请】${nickname}`,
-      html: `<h2>新的付费API开通申请</h2><p><strong>用户邮箱：</strong>${userEmail}</p><p><strong>站内昵称：</strong>${nickname}</p><p><strong>微信名：</strong>${wechat_name || '未填写'}</p><p><strong>微信号：</strong>${wechat_id || '未填写'}</p><p>请前往 <a href="https://omantools20-production.up.railway.app/admin.html">管理后台</a> 为该用户开通权限。</p>`
+      html: `<h2>新的付费API开通申请</h2><p><strong>用户邮箱：</strong>${userEmail}</p><p><strong>站内昵称：</strong>${nickname}</p><p><strong>微信名：</strong>${wechat_name || '未填写'}</p><p><strong>微信号：</strong>${wechat_id || '未填写'}</p><p>请前往 <a href="https://your-deployment-url.example.com/admin.html">管理后台</a> 为该用户开通权限。</p>`
     });
     res.json({ message: '申请已提交' });
   } catch (err) {
@@ -392,7 +426,7 @@ app.post('/api/send-email', async (req, res) => {
 app.post('/api/admin/users', async (req, res) => {
   try {
     const { admin_key } = req.body;
-    const ADMIN_KEY = process.env.ADMIN_KEY || 'Zjh666888!';
+    const ADMIN_KEY = process.env.ADMIN_KEY || 'change-me-in-production';
     if (admin_key !== ADMIN_KEY) return res.status(403).json({ error: '无权操作' });
 
     const [rows] = await pool.query(
@@ -455,7 +489,7 @@ async function initDatabase() {
 // 启动（先建表再监听）
 async function start() {
   await initDatabase();
-  app.listen(PORT, () => {
+  app.listen(PORT, '127.0.0.1', () => {
     console.log(`omale-tools API 服务已启动: http://localhost:${PORT}`);
   });
 }
