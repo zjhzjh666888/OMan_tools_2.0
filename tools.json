@@ -332,7 +332,7 @@
       "domain": "feishu.cn",
       "tag": "素材",
       "category": "media-tools",
-      "subCategory": "video",
+      "subCategory": "material-hub",
       "likes": 0,
       "views": 0
     },
@@ -344,7 +344,7 @@
       "domain": "quark.cn",
       "tag": "素材",
       "category": "media-tools",
-      "subCategory": "video",
+      "subCategory": "material-hub",
       "likes": 0,
       "views": 0
     },
@@ -356,7 +356,7 @@
       "domain": "jianjiwu.com",
       "tag": "剪辑",
       "category": "media-tools",
-      "subCategory": "video",
+      "subCategory": "material-hub",
       "likes": 0,
       "views": 0
     },
@@ -471,9 +471,9 @@
     {
       "id": "jianying-crack",
       "name": "剪映破解版",
-      "url": "https://pan.baidu.com/s/1SV77IiwG4TXlPp7Qw0YiZg?pwd=1r15",
+      "url": "https://pan.quark.cn/s/0f2e7b36b11e#/list/share",
       "desc": "剪映破解",
-      "domain": "pan.baidu.com",
+      "domain": "pan.quark.cn",
       "tag": "视频",
       "category": "free-vip",
       "subCategory": "",
@@ -529,14 +529,61 @@
       "views": 0
     },
     {
+      "id": "dandan-buyu",
+      "name": "蛋蛋不语",
+      "url": "https://z234009184.github.io/",
+      "desc": "免费观看视频会员的APP",
+      "domain": "z234009184.github.io",
+      "tag": "视频",
+      "category": "free-vip",
+      "subCategory": "",
+      "likes": 0,
+      "views": 0
+    },
+    {
       "id": "nexusvai-api",
-      "name": "无限Token免费API",
+      "name": "O-AI",
       "url": "https://www.nexusvai.xyz/chat/",
-      "desc": "9.9元：GPT 5.5，Gemini 3.1 pro，claude opus 4.7等等国内外大模型免费无限量API调用",
+      "desc": "1元解锁免费的AI聚合站",
       "domain": "nexusvai.xyz",
       "tag": "API",
       "category": "paid-api",
       "subCategory": "",
+      "likes": 0,
+      "views": 0
+    },
+    {
+      "id": "ai-video-vheer",
+      "name": "vheer",
+      "url": "https://vheer.com/",
+      "desc": "免费AI视频+图像生成",
+      "domain": "vheer.com",
+      "tag": "视频",
+      "category": "ai-tools",
+      "subCategory": "video",
+      "likes": 0,
+      "views": 0
+    },
+    {
+      "id": "ai-video-meta",
+      "name": "meta",
+      "url": "https://www.meta.ai/",
+      "desc": "Meta AI视频生成",
+      "domain": "meta.ai",
+      "tag": "视频",
+      "category": "ai-tools",
+      "subCategory": "video",
+      "likes": 0
+    },
+    {
+      "id": "ai-video-fogsight",
+      "name": "雾象",
+      "url": "https://fogsight.ai/",
+      "desc": "免费AI动画",
+      "domain": "fogsight.ai",
+      "tag": "视频",
+      "category": "ai-tools",
+      "subCategory": "video",
       "likes": 0,
       "views": 0
     }

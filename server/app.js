@@ -8,7 +8,8 @@ const { Resend } = require('resend');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
 const fs = require('fs');
-
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,13 +18,63 @@ const RESEND_KEY = process.env.RESEND_KEY || 'your-resend-api-key';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'your-email@example.com';
 const resend = new Resend(RESEND_KEY);
 
-// 中间件
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '..')));
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// CORS - 仅允许本站和本地开发
+const allowedOrigins = [
+  /^https?:\/\/omaleai\.qzz\.io$/,
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.some(pattern => pattern.test(origin))) {
+      callback(null, true);
+    } else {
+      callback(null, false); // 拒绝但不抛异常
+    }
+  },
+  credentials: true,
+}));
+
+app.use(express.json({ limit: '1mb' }));
+
+// 静态文件白名单 - 仅暴露前端必要文件
+const ALLOWED_STATIC = new Set([
+  '/', '/index.html', '/login.html', '/admin.html', '/tools.json',
+]);
+const ALLOWED_STATIC_PREFIXES = ['/assets/', '/uploads/'];
+
+app.use((req, res, next) => {
+  const urlPath = req.path;
+  if (ALLOWED_STATIC.has(urlPath) || ALLOWED_STATIC_PREFIXES.some(p => urlPath.startsWith(p))) {
+    next();
+  } else {
+    if (urlPath.startsWith('/api/')) {
+      next();
+    } else {
+      res.status(404).end();
+    }
+  }
+});
+
+// 首页显式路由（express.static + index:false 不会自动补全 index.html）
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+app.use(express.static(path.join(__dirname, '..'), {
+  index: false,
+  dotfiles: 'deny',
+}));
+
 const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
 if (!fs.existsSync(uploadsDir)) { fs.mkdirSync(uploadsDir, { recursive: true }); }
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads'), { dotfiles: 'deny' }));
 
 // MySQL 连接池
 const pool = mysql.createPool({
@@ -35,6 +86,32 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10
 });
+
+// 限流器
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: '发送过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/', generalLimiter);
 
 // JWT 鉴权中间件
 function authMiddleware(req, res, next) {
@@ -48,7 +125,7 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// 预设头像列表（注册后可领取）
+// 预设头像列表
 const AVATARS = [
   'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix',
   'https://api.dicebear.com/7.x/adventurer/svg?seed=Aneka',
@@ -66,8 +143,7 @@ const AVATARS = [
 
 // ==================== API 路由 ====================
 
-// 注册
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', authLimiter, async (req, res) => {
   try {
     const { email, password, nickname } = req.body;
 
@@ -75,7 +151,6 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: '请填写完整信息' });
     }
 
-    // 仅允许 QQ 邮箱
     if (!/@qq\.com$/i.test(email)) {
       return res.status(400).json({ error: '仅支持QQ邮箱注册' });
     }
@@ -88,7 +163,6 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ error: '昵称长度需2-20字符' });
     }
 
-    // 检查邮箱是否已注册
     const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length > 0) {
       return res.status(409).json({ error: '该邮箱已注册' });
@@ -114,8 +188,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// 登录
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -151,8 +224,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 获取当前用户信息
-// 修改昵称
 app.post('/api/profile/nickname', authMiddleware, async (req, res) => {
   const { nickname } = req.body;
   if (!nickname || nickname.length < 2 || nickname.length > 20) {
@@ -176,8 +247,6 @@ app.get('/api/me', authMiddleware, async (req, res) => {
   }
 });
 
-// 领取头像
-// 上传自定义头像（文件上传）
 app.post('/api/avatar/upload', authMiddleware, upload.single('avatar'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: '请选择图片' });
   const ext = path.extname(req.file.originalname) || '.png';
@@ -189,7 +258,6 @@ app.post('/api/avatar/upload', authMiddleware, upload.single('avatar'), async (r
   res.json({ message: '头像上传成功', avatar: avatarUrl });
 });
 
-// 选择预设头像（保留原有功能）
 app.post('/api/avatar', authMiddleware, async (req, res) => {
   try {
     const { avatar } = req.body;
@@ -202,18 +270,15 @@ app.post('/api/avatar', authMiddleware, async (req, res) => {
   }
 });
 
-// 获取可选头像列表
 app.get('/api/avatars', (req, res) => {
   res.json({ avatars: AVATARS });
 });
 
-// 点星标（登录后每个工具只能点一次）
 app.post('/api/star', authMiddleware, async (req, res) => {
   try {
     const { tool_id } = req.body;
     if (!tool_id) return res.status(400).json({ error: '缺少工具ID' });
 
-    // 检查是否已点过
     const [existing] = await pool.query(
       'SELECT id FROM user_stars WHERE user_id = ? AND tool_id = ?',
       [req.user.id, tool_id]
@@ -222,19 +287,16 @@ app.post('/api/star', authMiddleware, async (req, res) => {
       return res.status(409).json({ error: '您已经点过星标了', starred: true });
     }
 
-    // 插入记录
     await pool.query(
       'INSERT INTO user_stars (user_id, tool_id) VALUES (?, ?)',
       [req.user.id, tool_id]
     );
 
-    // 更新计数表
     await pool.query(
       'INSERT INTO tool_stars_count (tool_id, stars_count) VALUES (?, 1) ON DUPLICATE KEY UPDATE stars_count = stars_count + 1',
       [tool_id]
     );
 
-    // 返回最新计数
     const [countRow] = await pool.query(
       'SELECT stars_count FROM tool_stars_count WHERE tool_id = ?',
       [tool_id]
@@ -248,7 +310,6 @@ app.post('/api/star', authMiddleware, async (req, res) => {
   }
 });
 
-// 取消星标
 app.delete('/api/star', authMiddleware, async (req, res) => {
   try {
     const { tool_id } = req.body;
@@ -278,7 +339,6 @@ app.delete('/api/star', authMiddleware, async (req, res) => {
   }
 });
 
-// 获取所有工具的星标计数
 app.get('/api/stars', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT tool_id, stars_count FROM tool_stars_count');
@@ -290,7 +350,6 @@ app.get('/api/stars', async (req, res) => {
   }
 });
 
-// 获取当前用户已点赞的工具列表
 app.get('/api/my-stars', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -303,9 +362,7 @@ app.get('/api/my-stars', authMiddleware, async (req, res) => {
   }
 });
 
-// ========== 付费API权限接口 ==========
-
-// 检查当前用户是否有付费API权限
+// 付费API权限 - 检查
 app.get('/api/paid-api/check', authMiddleware, async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -318,7 +375,7 @@ app.get('/api/paid-api/check', authMiddleware, async (req, res) => {
   }
 });
 
-// 站长手动开通权限（需要站长身份验证，简单用 admin_key）
+// 付费API权限 - 站长开通
 app.post('/api/paid-api/grant', async (req, res) => {
   try {
     const { admin_key, user_email, expires_at, note } = req.body;
@@ -332,7 +389,6 @@ app.post('/api/paid-api/grant', async (req, res) => {
       return res.status(400).json({ error: '请提供用户邮箱' });
     }
 
-    // 查找用户
     const [users] = await pool.query('SELECT id, email, nickname FROM users WHERE email = ?', [user_email]);
     if (users.length === 0) {
       return res.status(404).json({ error: '用户不存在' });
@@ -340,7 +396,6 @@ app.post('/api/paid-api/grant', async (req, res) => {
 
     const user = users[0];
 
-    // 插入或更新权限
     await pool.query(
       `INSERT INTO paid_api_access (user_id, expires_at, note, status)
        VALUES (?, ?, ?, 'active')
@@ -355,7 +410,7 @@ app.post('/api/paid-api/grant', async (req, res) => {
   }
 });
 
-// 站长撤销权限
+// 付费API权限 - 站长撤销
 app.post('/api/paid-api/revoke', async (req, res) => {
   try {
     const { admin_key, user_email } = req.body;
@@ -385,17 +440,25 @@ app.post('/api/paid-api/revoke', async (req, res) => {
   }
 });
 
-// 用户付费后提交开通申请（发邮件通知站长，含微信信息）
-app.post('/api/paid-api/apply', authMiddleware, async (req, res) => {
+// 付费API权限 - 用户提交申请
+app.post('/api/paid-api/apply', authMiddleware, emailLimiter, async (req, res) => {
   try {
     const userEmail = req.user.email;
     const nickname = req.user.nickname || '未知';
     const { wechat_name, wechat_id } = req.body || {};
+
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     await resend.emails.send({
       from: 'OMan Tools <onboarding@resend.dev>',
       to: ADMIN_EMAIL,
       subject: `【付费API开通申请】${nickname}`,
-      html: `<h2>新的付费API开通申请</h2><p><strong>用户邮箱：</strong>${userEmail}</p><p><strong>站内昵称：</strong>${nickname}</p><p><strong>微信名：</strong>${wechat_name || '未填写'}</p><p><strong>微信号：</strong>${wechat_id || '未填写'}</p><p>请前往 <a href="https://your-deployment-url.example.com/admin.html">管理后台</a> 为该用户开通权限。</p>`
+      html: `<h2>新的付费API开通申请</h2>
+        <p><strong>用户邮箱：</strong>${esc(userEmail)}</p>
+        <p><strong>站内昵称：</strong>${esc(nickname)}</p>
+        <p><strong>微信名：</strong>${esc(wechat_name || '未填写')}</p>
+        <p><strong>微信号：</strong>${esc(wechat_id || '未填写')}</p>
+        <p>请前往管理员后台为该用户开通权限。</p>`
     });
     res.json({ message: '申请已提交' });
   } catch (err) {
@@ -404,16 +467,17 @@ app.post('/api/paid-api/apply', authMiddleware, async (req, res) => {
   }
 });
 
-// 通用发邮件接口（征集工具等）
-app.post('/api/send-email', async (req, res) => {
+// 通用发邮件接口（限流保护）
+app.post('/api/send-email', emailLimiter, async (req, res) => {
   try {
     const { subject, from_name, message } = req.body;
     if (!message || !from_name) return res.status(400).json({ error: '缺少必填字段' });
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     await resend.emails.send({
       from: 'OMan Tools <onboarding@resend.dev>',
       to: ADMIN_EMAIL,
-      subject: subject || `【网站反馈】来自 ${from_name}`,
-      html: `<h2>网站反馈</h2><p><strong>联系方式：</strong>${from_name}</p><p><strong>内容：</strong></p><pre>${message}</pre>`
+      subject: subject ? `【网站反馈】${esc(subject)}` : `【网站反馈】来自 ${esc(from_name)}`,
+      html: `<h2>网站反馈</h2><p><strong>联系方式：</strong>${esc(from_name)}</p><p><strong>内容：</strong></p><pre>${esc(message)}</pre>`
     });
     res.json({ message: '发送成功' });
   } catch (err) {
@@ -422,7 +486,7 @@ app.post('/api/send-email', async (req, res) => {
   }
 });
 
-// 站长查看所有用户（需 admin_key）
+// 站长查看所有用户
 app.post('/api/admin/users', async (req, res) => {
   try {
     const { admin_key } = req.body;
@@ -486,7 +550,6 @@ async function initDatabase() {
   }
 }
 
-// 启动（先建表再监听）
 async function start() {
   await initDatabase();
   app.listen(PORT, '127.0.0.1', () => {

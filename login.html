@@ -161,6 +161,43 @@
       box-shadow: none;
     }
 
+    /* 游客访问 */
+    .guest-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 0 0;
+      color: rgba(255,255,255,0.25);
+      font-size: 12px;
+    }
+    .guest-divider::before,
+    .guest-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+    }
+    .guest-link {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      color: rgba(255,255,255,0.55);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.25s;
+    }
+    .guest-link:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(99,102,241,0.4);
+      color: rgba(255,255,255,0.8);
+    }
+
     /* 消息提示 */
     .auth-message {
       padding: 10px 14px;
@@ -319,6 +356,8 @@
     </div>
     <div id="loginMsg"></div>
     <button type="submit" class="submit-btn" id="loginBtn">登 录</button>
+    <div class='guest-divider'><span>或</span></div>
+    <button class='guest-link' onclick='visitAsGuest()'>游客访问</button>
   </form>
 
   <!-- 注册表单 -->
@@ -360,7 +399,7 @@
   // ========== API 地址 ==========
   const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? `${location.protocol}//${location.hostname}:3000`
-    : '';
+    : '/otools';
 
   // ========== 粒子星空动画 ==========
   const canvas = document.getElementById('particle-canvas');
@@ -702,6 +741,10 @@
 
   function skipAvatar() {
     window.location.href = 'index.html';
+  }
+
+  function visitAsGuest() {
+    window.location.href = 'index.html?guest=1';
   }
 
   // 已登录用户自动跳转

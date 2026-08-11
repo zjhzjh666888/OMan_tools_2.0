@@ -39,7 +39,7 @@
 <body>
   <div class="container">
     <h1>站长管理后台</h1>
-    <p class="desc">查看注册用户、开通/撤销「无限Token免费API」权限</p>
+    <p class="desc">查看注册用户、开通/撤销「AI聚合站」权限</p>
 
     <label>管理员密钥</label>
     <input type="password" id="adminKey" placeholder="输入管理员密钥">
@@ -48,7 +48,7 @@
     <input type="email" id="userEmail" placeholder="例如：123456789@qq.com">
 
     <label>备注（选填）</label>
-    <input type="text" id="note" placeholder="例如：微信已付9.9元">
+    <input type="text" id="note" placeholder="例如：微信已付1元">
 
     <div class="btn-row">
       <button class="btn-grant" onclick="doAction('grant')">开通权限</button>
@@ -63,20 +63,32 @@
   </div>
 
   <script>
-    const API = 'https://omantools20-production.up.railway.app';
+    // 本地开发走 localhost:3000，线上走 nginx 反代路径 /otools
+    const API = window.location.hostname === 'localhost' ? 'http://localhost:3000' : '/otools';
+
+    function esc(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function setResult(cls, msg) {
+      const el = document.getElementById('result');
+      el.className = 'result ' + cls;
+      el.textContent = msg;
+    }
 
     async function doAction(action) {
       const adminKey = document.getElementById('adminKey').value.trim();
       const userEmail = document.getElementById('userEmail').value.trim();
       const note = document.getElementById('note').value.trim();
-      const resultEl = document.getElementById('result');
 
       if (!adminKey || !userEmail) {
-        resultEl.className = 'result error';
-        resultEl.textContent = '请填写管理员密钥和用户邮箱';
+        setResult('error', '请填写管理员密钥和用户邮箱');
         return;
       }
 
+      const resultEl = document.getElementById('result');
       resultEl.className = 'result';
       resultEl.style.display = 'block';
       resultEl.textContent = '处理中...';
@@ -95,16 +107,13 @@
         const data = await resp.json();
 
         if (resp.ok) {
-          resultEl.className = 'result success';
-          resultEl.textContent = data.message || (action === 'grant' ? '开通成功' : '撤销成功');
+          setResult('success', data.message || (action === 'grant' ? '开通成功' : '撤销成功'));
           loadUsers();
         } else {
-          resultEl.className = 'result error';
-          resultEl.textContent = data.error || '操作失败';
+          setResult('error', data.error || '操作失败');
         }
       } catch (err) {
-        resultEl.className = 'result error';
-        resultEl.textContent = '网络错误：' + err.message;
+        setResult('error', '网络错误：' + err.message);
       }
     }
 
@@ -128,7 +137,7 @@
         const data = await resp.json();
 
         if (!resp.ok) {
-          tableEl.innerHTML = `<p class="empty" style="color:#e5482f">${data.error || '加载失败'}</p>`;
+          tableEl.innerHTML = '<p class="empty" style="color:#e5482f">' + esc(data.error || '加载失败') + '</p>';
           return;
         }
 
@@ -137,18 +146,18 @@
           return;
         }
 
-        let html = `<table><thead><tr><th>ID</th><th>邮箱</th><th>昵称</th><th>注册时间</th><th>付费状态</th></tr></thead><tbody>`;
+        let html = '<table><thead><tr><th>ID</th><th>邮箱</th><th>昵称</th><th>注册时间</th><th>付费状态</th></tr></thead><tbody>';
         data.users.forEach(u => {
           const time = new Date(u.created_at).toLocaleString('zh-CN');
           const badge = u.has_paid
             ? '<span class="badge badge-yes">已开通</span>'
             : '<span class="badge badge-no">未开通</span>';
-          html += `<tr><td>${u.id}</td><td>${u.email}</td><td>${u.nickname}</td><td>${time}</td><td>${badge}</td></tr>`;
+          html += '<tr><td>' + esc(String(u.id)) + '</td><td>' + esc(u.email) + '</td><td>' + esc(u.nickname) + '</td><td>' + esc(time) + '</td><td>' + badge + '</td></tr>';
         });
         html += '</tbody></table>';
         tableEl.innerHTML = html;
       } catch (err) {
-        tableEl.innerHTML = `<p class="empty" style="color:#e5482f">网络错误：${err.message}</p>`;
+        tableEl.innerHTML = '<p class="empty" style="color:#e5482f">网络错误：' + esc(err.message) + '</p>';
       }
     }
   </script>

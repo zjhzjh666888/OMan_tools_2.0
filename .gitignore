@@ -1,0 +1,43 @@
+# 环境变量（含密钥）
+.env
+.env.*
+!.env.example
+
+# 备份文件
+*.bak
+*~
+
+# 依赖
+node_modules/
+package-lock.json
+
+# 日志
+*.log
+logs/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 临时脚本
+gen_token.js
+remove_lovart.py
+temp_check_db.js
+server/reset_pw.js
+server/set_pw.js
+server/temp_check.js
+server/temp_check_db.js
+server/verify_pw.js
+server/verify_pw2.js
+
+# 二维码图片
+qr-community.png
+qrcode_mp.png
+assets/wechat_qr.jpg
+assets/vue*
